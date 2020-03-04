@@ -209,7 +209,7 @@ void memdump::load_wanted_targets(const memdump_config* c)
         // just ignore the argument types provided
         while (std::getline(ss, arg_type, ',') && !arg_type.empty());
 
-        if (strategy == "stack" || strategy == "log+stack") {
+        if (e.strategy == "stack" || e.strategy == "log+stack") {
             this->wanted_hooks.push_back(e);
         }
     }

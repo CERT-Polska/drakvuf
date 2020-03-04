@@ -388,7 +388,7 @@ void apimon::load_wanted_targets(const apimon_config* c)
             }
         }
 
-        if (strategy == "log" || strategy == "log+stack") {
+        if (e.strategy == "log" || e.strategy == "log+stack") {
             this->wanted_hooks.push_back(e);
         }
     }
