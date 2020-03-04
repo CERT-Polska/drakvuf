@@ -117,11 +117,12 @@ struct api_target_config_entry_t
 {
     std::string dll_name;
     std::string function_name;
+    std::string strategy;
     std::vector < ArgumentPrinter* > argument_printers;
 
-    api_target_config_entry_t() : dll_name(), function_name() {}
-    api_target_config_entry_t(std::string&& dll_name, std::string&& function_name, std::vector < ArgumentPrinter* > argument_printers)
-        : dll_name(std::move(dll_name)), function_name(std::move(function_name)), argument_printers(std::move(argument_printers)) {}
+    api_target_config_entry_t() : dll_name(), function_name(), strategy() {}
+    api_target_config_entry_t(std::string&& dll_name, std::string&& function_name, std::string&& strategy, std::vector < ArgumentPrinter* > argument_printers)
+        : dll_name(std::move(dll_name)), function_name(std::move(function_name)), strategy(std::move(strategy)), argument_printers(std::move(argument_printers)) {}
 };
 
 struct apimon_config

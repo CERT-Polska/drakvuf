@@ -203,12 +203,15 @@ void memdump::load_wanted_targets(const memdump_config* c)
             throw -1;
         if (!std::getline(ss, e.function_name, ',') || e.function_name.empty())
             throw -1;
-        while (std::getline(ss, arg_type, ',') && !arg_type.empty())
-        {
-            // TODO ignore
-        }
+        if (!std::getline(ss, e.strategy, ',') || e.strategy.empty())
+            throw -1;
 
-        this->wanted_hooks.push_back(e);
+        // just ignore the argument types provided
+        while (std::getline(ss, arg_type, ',') && !arg_type.empty());
+
+        if (strategy == "stack" || strategy == "log+stack") {
+            this->wanted_hooks.push_back(e);
+        }
     }
 }
 

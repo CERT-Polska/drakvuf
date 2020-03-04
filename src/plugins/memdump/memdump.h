@@ -117,10 +117,11 @@ struct target_config_entry_t
 {
     std::string dll_name;
     std::string function_name;
+    std::string strategy;
 
-    target_config_entry_t() : dll_name(), function_name() {}
-    target_config_entry_t(std::string&& dll_name, std::string&& function_name)
-        : dll_name(std::move(dll_name)), function_name(std::move(function_name)) {}
+    target_config_entry_t() : dll_name(), function_name(), strategy() {}
+    target_config_entry_t(std::string&& dll_name, std::string&& function_name, std::string&& strategy)
+        : dll_name(std::move(dll_name)), function_name(std::move(function_name)), strategy(strategy) {}
 };
 
 struct memdump_config

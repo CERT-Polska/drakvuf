@@ -365,6 +365,9 @@ void apimon::load_wanted_targets(const apimon_config* c)
             throw -1;
         if (!std::getline(ss, e.function_name, ',') || e.function_name.empty())
             throw -1;
+        if (!std::getline(ss, e.strategy, ',') || e.strategy.empty())
+            throw -1;
+
         while (std::getline(ss, arg_type, ',') && !arg_type.empty())
         {
             if (arg_type == "lpcstr" || arg_type == "lpctstr")
@@ -385,7 +388,9 @@ void apimon::load_wanted_targets(const apimon_config* c)
             }
         }
 
-        this->wanted_hooks.push_back(e);
+        if (strategy == "log" || strategy == "log+stack") {
+            this->wanted_hooks.push_back(e);
+        }
     }
 }
 
