@@ -134,6 +134,11 @@
 userhook* instance = nullptr;
 
 
+static void wrap_delete(drakvuf_trap_t* trap)
+{
+    delete trap;
+}
+
 /**
  * Check if this thread is currently in process of loading a DLL.
  * If so, return a pointer to the associated metadata.
@@ -677,8 +682,7 @@ static event_response_t copy_on_write_ret_cb(drakvuf_t drakvuf, drakvuf_trap_inf
 
         if (hook->trap)
         {
-            drakvuf_remove_trap(drakvuf, hook->trap, nullptr);
-            delete hook->trap;
+            drakvuf_remove_trap(drakvuf, hook->trap, wrap_delete);
             hook->state = HOOK_FAILED;
             hook->trap = nullptr;
         }
