@@ -228,8 +228,8 @@ static void print_usage()
             "\t                           Where to store memory dumps\n"
             "\t --dll-hooks-list <file>\n"
             "\t                           List of DLL functions to be hooked\n"
-            "\t                           each entry in a separate line of file\n"
-            "\t                           line format: dll_name,function_name,num_of_arguments\n"
+            "\t                           example file for Win7 x64:\n"
+            "\t                           src/plugins/apimon/example/dll-hooks-list-win7x64\n"
 #endif
             "\t -h, --help                Show this help\n"
             );
