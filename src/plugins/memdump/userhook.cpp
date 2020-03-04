@@ -177,8 +177,8 @@ void memdump::load_wanted_targets(const memdump_config* c)
     if (!c->dll_hooks_list)
     {
         // if the DLL hook list was not provided, we provide some simple defaults
-        this->wanted_hooks.emplace_back("ws2_32.dll", "WSAStartup");
-        this->wanted_hooks.emplace_back("ntdll.dll", "RtlExitUserProcess");
+        this->wanted_hooks.emplace_back("ws2_32.dll", "WSAStartup", "log+stack");
+        this->wanted_hooks.emplace_back("ntdll.dll", "RtlExitUserProcess", "log+stack");
         return;
     }
 

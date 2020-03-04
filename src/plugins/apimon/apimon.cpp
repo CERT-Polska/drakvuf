@@ -339,8 +339,8 @@ void apimon::load_wanted_targets(const apimon_config* c)
     if (!c->dll_hooks_list)
     {
         // if the DLL hook list was not provided, we provide some simple defaults
-        this->wanted_hooks.emplace_back("ws2_32.dll", "WSAStartup", std::vector<ArgumentPrinter*> { new ArgumentPrinter(), new ArgumentPrinter() });
-        this->wanted_hooks.emplace_back("ntdll.dll", "RtlExitUserProcess", std::vector<ArgumentPrinter*> { new ArgumentPrinter(), new ArgumentPrinter() });
+        this->wanted_hooks.emplace_back("ws2_32.dll", "WSAStartup", "log+stack", std::vector<ArgumentPrinter*> { new ArgumentPrinter(), new ArgumentPrinter() });
+        this->wanted_hooks.emplace_back("ntdll.dll", "RtlExitUserProcess", "log+stack", std::vector<ArgumentPrinter*> { new ArgumentPrinter(), new ArgumentPrinter() });
         return;
     }
 
