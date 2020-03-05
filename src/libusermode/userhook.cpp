@@ -859,7 +859,7 @@ void drakvuf_load_dll_hook_config(drakvuf_t drakvuf, const char* dll_hooks_list_
         return;
     }
 
-    std::ifstream ifs(c->dll_hooks_list, std::ifstream::in);
+    std::ifstream ifs(dll_hooks_list_path, std::ifstream::in);
 
     if (!ifs)
     {
@@ -873,7 +873,7 @@ void drakvuf_load_dll_hook_config(drakvuf_t drakvuf, const char* dll_hooks_list_
             continue;
 
         std::stringstream ss(line);
-        api_target_config_entry_t e;
+        plugin_target_config_entry_t e;
 
         std::string arg_type;
         if (!std::getline(ss, e.dll_name, ',') || e.dll_name.empty())

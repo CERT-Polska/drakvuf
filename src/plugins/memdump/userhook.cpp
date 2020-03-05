@@ -186,10 +186,10 @@ void memdump::userhook_init(drakvuf_t drakvuf, const memdump_config* c, output_f
 
     auto it = std::begin(this->wanted_hooks);
 
-    while (it != std::end(inv))
+    while (it != std::end(this->wanted_hooks))
     {
-        if ((*it)->strategy != "stack" && (*it)->strategy != "log+stack")
-            it = inv.erase(it);
+        if ((*it).strategy != "stack" && (*it).strategy != "log+stack")
+            it = this->wanted_hooks.erase(it);
         else
             ++it;
     }

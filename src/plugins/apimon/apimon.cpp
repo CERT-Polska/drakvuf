@@ -348,11 +348,11 @@ apimon::apimon(drakvuf_t drakvuf, const apimon_config* c, output_format_t output
 
     auto it = std::begin(this->wanted_hooks);
 
-    while (it != std::end(inv))
+    while (it != std::end(this->wanted_hooks))
     {
-        if ((*it)->strategy != "log" && (*it)->strategy != "log+stack")
-            it = inv.erase(it);
-        else
+        if ((*it).strategy != "log" && (*it).strategy != "log+stack")
+            it = this->wanted_hooks.erase(it);
+	else
             ++it;
     }
 

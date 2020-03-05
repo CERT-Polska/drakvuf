@@ -123,6 +123,8 @@ struct plugin_target_config_entry_t
     std::vector<ArgumentPrinter*> argument_printers;
 
     plugin_target_config_entry_t() : dll_name(), function_name(), strategy(), argument_printers() {}
+    plugin_target_config_entry_t(std::string&& dll_name, std::string&& function_name, std::string&& strategy, std::vector < ArgumentPrinter* > argument_printers)
+        : dll_name(std::move(dll_name)), function_name(std::move(function_name)), strategy(std::move(strategy)), argument_printers(std::move(argument_printers)) {}
 };
 
 enum target_hook_state
