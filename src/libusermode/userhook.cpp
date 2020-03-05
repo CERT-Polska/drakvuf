@@ -792,7 +792,7 @@ usermode_reg_status_t userhook::init(drakvuf_t drakvuf)
     return USERMODE_REGISTER_SUCCESS;
 }
 
-void userhook::request_usermode_hook(drakvuf_t drakvuf, const dll_view_t* dll, const char* func_name, callback_t callback, std::vector<ArgumentPrinter*> argument_printers, void* extra)
+void userhook::request_usermode_hook(drakvuf_t drakvuf, const dll_view_t* dll, const char* func_name, callback_t callback, const std::vector< std::unique_ptr < ArgumentPrinter > > &argument_printers, void* extra)
 {
     dll_t* p_dll = (dll_t*)const_cast<dll_view_t*>(dll);
     p_dll->targets.emplace_back(func_name, callback, argument_printers, extra);
@@ -839,7 +839,7 @@ usermode_reg_status_t drakvuf_register_usermode_callback(drakvuf_t drakvuf, user
     return USERMODE_REGISTER_SUCCESS;
 }
 
-bool drakvuf_request_usermode_hook(drakvuf_t drakvuf, const dll_view_t* dll, const char* func_name, callback_t callback, std::vector<ArgumentPrinter*> argument_printers, void* extra)
+bool drakvuf_request_usermode_hook(drakvuf_t drakvuf, const dll_view_t* dll, const char* func_name, callback_t callback, const std::vector < std::unique_ptr < ArgumentPrinter > > &argument_printers, void* extra)
 {
     if (!instance || !instance->initialized) {
         return false;
@@ -854,8 +854,15 @@ void drakvuf_load_dll_hook_config(drakvuf_t drakvuf, const char* dll_hooks_list_
     if (!dll_hooks_list_path)
     {
         // if the DLL hook list was not provided, we provide some simple defaults
-        wanted_hooks->emplace_back("ws2_32.dll", "WSAStartup", "log+stack", std::vector<ArgumentPrinter*> { new ArgumentPrinter(), new ArgumentPrinter() });
-        wanted_hooks->emplace_back("ntdll.dll", "RtlExitUserProcess", "log+stack", std::vector<ArgumentPrinter*> { new ArgumentPrinter(), new ArgumentPrinter() });
+        std::vector< std::unique_ptr < ArgumentPrinter > > arg_vec1;
+        arg_vec1.push_back(std::unique_ptr < ArgumentPrinter>(new ArgumentPrinter()));
+        arg_vec1.push_back(std::unique_ptr < ArgumentPrinter>(new ArgumentPrinter()));
+        wanted_hooks->emplace_back("ws2_32.dll", "WSAStartup", "log+stack", std::move(arg_vec1));
+
+        std::vector< std::unique_ptr < ArgumentPrinter > > arg_vec2;
+        arg_vec1.push_back(std::unique_ptr < ArgumentPrinter>(new ArgumentPrinter()));
+        arg_vec1.push_back(std::unique_ptr < ArgumentPrinter>(new ArgumentPrinter()));
+        wanted_hooks->emplace_back("ntdll.dll", "RtlExitUserProcess", "log+stack", std::move(arg_vec2));
         return;
     }
 
@@ -873,7 +880,9 @@ void drakvuf_load_dll_hook_config(drakvuf_t drakvuf, const char* dll_hooks_list_
             continue;
 
         std::stringstream ss(line);
-        plugin_target_config_entry_t e;
+
+        wanted_hooks->push_back(plugin_target_config_entry_t());
+        plugin_target_config_entry_t &e = wanted_hooks->back();
 
         std::string arg_type;
         if (!std::getline(ss, e.dll_name, ',') || e.dll_name.empty())
@@ -890,22 +899,20 @@ void drakvuf_load_dll_hook_config(drakvuf_t drakvuf, const char* dll_hooks_list_
         {
             if (arg_type == "lpcstr" || arg_type == "lpctstr")
             {
-                e.argument_printers.push_back(new AsciiPrinter());
+                e.argument_printers.push_back(std::unique_ptr< ArgumentPrinter>(new AsciiPrinter()));
             }
             else if (arg_type == "lpcwstr" || arg_type == "lpwstr")
             {
-                e.argument_printers.push_back(new WideStringPrinter());
+                e.argument_printers.push_back(std::unique_ptr< ArgumentPrinter>(new WideStringPrinter()));
             }
             else if (arg_type == "punicode_string")
             {
-                e.argument_printers.push_back(new UnicodePrinter());
+                e.argument_printers.push_back(std::unique_ptr< ArgumentPrinter>(new UnicodePrinter()));
             }
             else
             {
-                e.argument_printers.push_back(new ArgumentPrinter());
+                e.argument_printers.push_back(std::unique_ptr< ArgumentPrinter>(new ArgumentPrinter()));
             }
         }
-
-        wanted_hooks->push_back(e);
     }
 }

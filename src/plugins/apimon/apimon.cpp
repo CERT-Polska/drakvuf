@@ -115,7 +115,7 @@
 #include "crypto.h"
 
 
-void print_arguments(drakvuf_t drakvuf, drakvuf_trap_info* info, std::vector < uint64_t > arguments, std::vector < ArgumentPrinter* > argument_printers)
+void print_arguments(drakvuf_t drakvuf, drakvuf_trap_info* info, std::vector < uint64_t > arguments, const std::vector < std::unique_ptr < ArgumentPrinter > > &argument_printers)
 {
     json_object *jobj = json_object_new_array();
 
@@ -251,7 +251,7 @@ static event_response_t usermode_hook_cb(drakvuf_t drakvuf, drakvuf_trap_info* i
         success = vmi_read_64(lg.vmi, &ctx, &ret_addr) == VMI_SUCCESS;
     }
 
-    return_hook_target_entry_t* ret_target = new return_hook_target_entry_t();
+    return_hook_target_entry_t* ret_target = new return_hook_target_entry_t(target->pid, target->plugin, target->argument_printers);
     drakvuf_trap_t* trap = new drakvuf_trap_t;
 
     for (size_t i = 1; i <= target->argument_printers.size(); i++)
@@ -259,8 +259,6 @@ static event_response_t usermode_hook_cb(drakvuf_t drakvuf, drakvuf_trap_info* i
         uint64_t argument = drakvuf_get_function_argument(drakvuf, info, i);
         ret_target->arguments.push_back(argument);
     }
-    ret_target->argument_printers = target->argument_printers;
-    ret_target->plugin = target->plugin;
 
     addr_t paddr;
 
@@ -271,8 +269,6 @@ static event_response_t usermode_hook_cb(drakvuf_t drakvuf, drakvuf_trap_info* i
         return VMI_EVENT_RESPONSE_NONE;
 
     }
-
-    ret_target->pid = target->pid;
 
     trap->type = BREAKPOINT;
     trap->name = target->target_name.c_str();

@@ -114,6 +114,7 @@ class ArgumentPrinter
 {
 public:
     virtual std::string print(drakvuf_t drakvuf, drakvuf_trap_info* info, uint64_t argument);
+    virtual ~ArgumentPrinter();
 };
 
 class StringPrinterInterface : public ArgumentPrinter

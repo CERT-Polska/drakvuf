@@ -115,6 +115,8 @@ std::string ArgumentPrinter::print(drakvuf_t drakvuf, drakvuf_trap_info* info, u
     return stream.str();
 }
 
+ArgumentPrinter::~ArgumentPrinter() {}
+
 std::string StringPrinterInterface::print(drakvuf_t drakvuf, drakvuf_trap_info* info, uint64_t argument)
 {
     auto vmi = drakvuf_lock_and_get_vmi(drakvuf);
