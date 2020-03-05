@@ -184,6 +184,16 @@ void memdump::userhook_init(drakvuf_t drakvuf, const memdump_config* c, output_f
         throw -1;
     }
 
+    auto it = std::begin(this->wanted_hooks);
+
+    while (it != std::end(inv))
+    {
+        if ((*it)->strategy != "stack" && (*it)->strategy != "log+stack")
+            it = inv.erase(it);
+        else
+            ++it;
+    }
+
     if (this->wanted_hooks.empty())
     {
         // don't load this part of plugin if there is nothing to do
