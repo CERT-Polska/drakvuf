@@ -120,7 +120,7 @@ struct plugin_target_config_entry_t
     std::string dll_name;
     std::string function_name;
     std::string strategy;
-    std::vector<ArgumentPrinter> argument_printers;
+    std::vector<ArgumentPrinter*> argument_printers;
 
     plugin_target_config_entry_t() : dll_name(), function_name(), strategy(), argument_printers() {}
 };
