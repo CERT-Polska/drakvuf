@@ -159,18 +159,16 @@ static event_response_t usermode_return_hook_cb(drakvuf_t drakvuf, drakvuf_trap_
     switch (plugin->m_output_format)
     {
         case OUTPUT_CSV:
-            printf("apimon," FORMAT_TIMEVAL ",%" PRIu32 ",0x%" PRIx64 ",\"%s\",%" PRIi64 ",\"%s\",0x%" PRIx64 ",0x%" PRIx64 ",\"",
+            printf("apimon," FORMAT_TIMEVAL ",%" PRIu32 ",0x%" PRIx64 ",\"%s\",%" PRIi64 ",\"%s\",0x%" PRIx64 ",0x%" PRIx64 ",",
             UNPACK_TIMEVAL(info->timestamp), info->vcpu, info->regs->cr3, info->proc_data.name,
             info->proc_data.userid, info->trap->name, info->regs->rax, info->regs->rip);
             print_arguments(drakvuf, info, ret_target->arguments, ret_target->argument_printers);
-            printf("\"");
             break;
         case OUTPUT_KV:
-            printf("apimon, Time=" FORMAT_TIMEVAL ",VCPU=%" PRIu32 ",CR3=0x%" PRIx64 ",ProcessName=\"%s\",UserID=%" PRIi64 ",Method=\"%s\",CalledFrom=0x%" PRIx64 ",ReturnValue=0x%" PRIx64 ",Arguments=\"",
+            printf("apimon, Time=" FORMAT_TIMEVAL ",VCPU=%" PRIu32 ",CR3=0x%" PRIx64 ",ProcessName=\"%s\",UserID=%" PRIi64 ",Method=\"%s\",CalledFrom=0x%" PRIx64 ",ReturnValue=0x%" PRIx64 ",Arguments=",
             UNPACK_TIMEVAL(info->timestamp), info->vcpu, info->regs->cr3, info->proc_data.name,
             info->proc_data.userid, info->trap->name, info->regs->rip, info->regs->rax);
             print_arguments(drakvuf, info, ret_target->arguments, ret_target->argument_printers);
-            printf("\"");
             break;
         case OUTPUT_JSON:
             escaped_pname = drakvuf_escape_str(info->proc_data.name);
@@ -203,11 +201,10 @@ static event_response_t usermode_return_hook_cb(drakvuf_t drakvuf, drakvuf_trap_
             break;
         default:
         case OUTPUT_DEFAULT:
-            printf("[APIMON-USERHOOK] TIME:" FORMAT_TIMEVAL " VCPU:%" PRIu32 " CR3:0x%" PRIx64 " ProcessName:\"%s\" UserID:%" PRIi64 " Method:\"%s\" CalledFrom:0x%" PRIx64 " ReturnValue:0x%" PRIx64 " Arguments:\"",
+            printf("[APIMON-USERHOOK] TIME:" FORMAT_TIMEVAL " VCPU:%" PRIu32 " CR3:0x%" PRIx64 " ProcessName:\"%s\" UserID:%" PRIi64 " Method:\"%s\" CalledFrom:0x%" PRIx64 " ReturnValue:0x%" PRIx64 " Arguments:",
             UNPACK_TIMEVAL(info->timestamp), info->vcpu, info->regs->cr3, info->proc_data.name,
             info->proc_data.userid, info->trap->name, info->regs->rax, info->regs->rip);
             print_arguments(drakvuf, info, ret_target->arguments, ret_target->argument_printers);
-            printf("\"");
             break;
     }
     printf("\n");
