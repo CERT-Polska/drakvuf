@@ -99,8 +99,8 @@
  * license file for more details (it's in a COPYING file included with     *
  * DRAKVUF, and also available from                                        *
  * https://github.com/tklengyel/drakvuf/COPYING)                           *
- **
-     ***************************************************************************/
+ *                                                                         *
+ ***************************************************************************/
 
 #ifndef PRINTERS_H
 #define PRINTERS_H
