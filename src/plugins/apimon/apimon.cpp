@@ -224,8 +224,8 @@ static event_response_t usermode_hook_cb(drakvuf_t drakvuf, drakvuf_trap_info* i
     if (target->pid != info->proc_data.pid)
         return VMI_EVENT_RESPONSE_NONE;
 
-    auto vmi = drakvuf_lock_and_get_vmi(drakvuf);
-    vmi_v2pcache_flush(vmi, info->regs->cr3);
+    vmi_lock_guard lg(drakvuf);
+    vmi_v2pcache_flush(lg.vmi, info->regs->cr3);
 
     bool is_syswow = drakvuf_is_wow64(drakvuf, info);
 
@@ -243,7 +243,7 @@ static event_response_t usermode_hook_cb(drakvuf_t drakvuf, drakvuf_trap_info* i
     {
         uint32_t ret_addr_tmp;
 
-        if (vmi_read_32(vmi, &ctx, &ret_addr_tmp) == VMI_SUCCESS)
+        if (vmi_read_32(lg.vmi, &ctx, &ret_addr_tmp) == VMI_SUCCESS)
         {
             success = true;
             ret_addr = ret_addr_tmp;
@@ -251,9 +251,8 @@ static event_response_t usermode_hook_cb(drakvuf_t drakvuf, drakvuf_trap_info* i
     }
     else
     {
-        success = vmi_read_64(vmi, &ctx, &ret_addr) == VMI_SUCCESS;
+        success = vmi_read_64(lg.vmi, &ctx, &ret_addr) == VMI_SUCCESS;
     }
-    drakvuf_release_vmi(drakvuf);
 
     return_hook_target_entry_t* ret_target = new return_hook_target_entry_t();
     drakvuf_trap_t* trap = new drakvuf_trap_t;
@@ -267,17 +266,14 @@ static event_response_t usermode_hook_cb(drakvuf_t drakvuf, drakvuf_trap_info* i
     ret_target->plugin = target->plugin;
 
     addr_t paddr;
-    vmi = drakvuf_lock_and_get_vmi(drakvuf);
 
-    if ( VMI_SUCCESS != vmi_pagetable_lookup(vmi, info->regs->cr3, ret_addr, &paddr) )
+    if ( VMI_SUCCESS != vmi_pagetable_lookup(lg.vmi, info->regs->cr3, ret_addr, &paddr) )
     {
-        delete ret_target;
         delete trap;
-        drakvuf_release_vmi(drakvuf);
+        delete ret_target;
         return VMI_EVENT_RESPONSE_NONE;
 
     }
-    drakvuf_release_vmi(drakvuf);
 
     ret_target->pid = target->pid;
 
@@ -308,8 +304,8 @@ static void on_dll_discovered(drakvuf_t drakvuf, const dll_view_t* dll, void* ex
 {
     apimon* plugin = (apimon*)extra;
 
-    vmi_instance_t vmi = drakvuf_lock_and_get_vmi(drakvuf);
-    unicode_string_t* dll_name = drakvuf_read_unicode_va(vmi, dll->mmvad.file_name_ptr, 0);
+    vmi_lock_guard lg(drakvuf);
+    unicode_string_t* dll_name = drakvuf_read_unicode_va(lg.vmi, dll->mmvad.file_name_ptr, 0);
 
     if (dll_name && dll_name->contents)
     {
@@ -324,8 +320,6 @@ static void on_dll_discovered(drakvuf_t drakvuf, const dll_view_t* dll, void* ex
 
     if (dll_name)
         vmi_free_unicode_str(dll_name);
-
-    drakvuf_release_vmi(drakvuf);
 }
 
 static void on_dll_hooked(drakvuf_t drakvuf, const dll_view_t* dll, void* extra)
@@ -370,11 +364,16 @@ apimon::apimon(drakvuf_t drakvuf, const apimon_config* c, output_format_t output
 
     usermode_reg_status_t status = drakvuf_register_usermode_callback(drakvuf, &reg);
 
-    if (status == USERMODE_ARCH_UNSUPPORTED) {
-        PRINT_DEBUG("[APIMON] Usermode hooking is not supported on this architecture/bitness, these features will be disabled\n");
-    } else if (status != USERMODE_REGISTER_SUCCESS) {
-        PRINT_DEBUG("[APIMON] Failed to subscribe to libusermode\n");
-        throw -1;
+    switch (status) {
+        case USERMODE_REGISTER_SUCCESS:
+            // success, nothing to do
+            break;
+        case USERMODE_ARCH_UNSUPPORTED:
+            PRINT_DEBUG("[APIMON] Usermode hooking is not supported on this architecture/bitness, these features will be disabled\n");
+            break;
+        default:
+            PRINT_DEBUG("[APIMON] Failed to subscribe to libusermode\n");
+            throw -1;
     }
 }
 

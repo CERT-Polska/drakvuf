@@ -150,7 +150,9 @@ std::string UnicodePrinter::getBuffer(vmi_instance_t vmi, const access_context_t
 }
 
 BitMaskPrinter::BitMaskPrinter(std::map < uint64_t, std::string > dict) : dict(dict)
-{}
+{
+    // intentionally empty
+}
 
 std::string BitMaskPrinter::print(drakvuf_t drakvuf, drakvuf_trap_info* info, uint64_t argument)
 {
