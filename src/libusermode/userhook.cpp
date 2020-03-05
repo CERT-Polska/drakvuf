@@ -848,3 +848,64 @@ bool drakvuf_request_usermode_hook(drakvuf_t drakvuf, const dll_view_t* dll, con
     instance->request_usermode_hook(drakvuf, dll, func_name, callback, argument_printers, extra);
     return true;
 }
+
+void drakvuf_load_dll_hook_config(drakvuf_t drakvuf, const char* dll_hooks_list_path, std::vector<plugin_target_config_entry_t>* wanted_hooks)
+{
+    if (!dll_hooks_list_path)
+    {
+        // if the DLL hook list was not provided, we provide some simple defaults
+        wanted_hooks->emplace_back("ws2_32.dll", "WSAStartup", "log+stack", std::vector<ArgumentPrinter*> { new ArgumentPrinter(), new ArgumentPrinter() });
+        wanted_hooks->emplace_back("ntdll.dll", "RtlExitUserProcess", "log+stack", std::vector<ArgumentPrinter*> { new ArgumentPrinter(), new ArgumentPrinter() });
+        return;
+    }
+
+    std::ifstream ifs(c->dll_hooks_list, std::ifstream::in);
+
+    if (!ifs)
+    {
+        throw -1;
+    }
+
+    std::string line;
+    while (std::getline(ifs, line))
+    {
+        if (line.empty() || line[0] == '#')
+            continue;
+
+        std::stringstream ss(line);
+        api_target_config_entry_t e;
+
+        std::string arg_type;
+        if (!std::getline(ss, e.dll_name, ',') || e.dll_name.empty())
+            throw -1;
+        if (!std::getline(ss, e.function_name, ',') || e.function_name.empty())
+            throw -1;
+        if (!std::getline(ss, e.strategy, ',') || e.strategy.empty())
+            throw -1;
+
+        if (e.strategy != "log" && e.strategy != "log+stack" && e.strategy != "stack")
+            throw -1;
+
+        while (std::getline(ss, arg_type, ',') && !arg_type.empty())
+        {
+            if (arg_type == "lpcstr" || arg_type == "lpctstr")
+            {
+                e.argument_printers.push_back(new AsciiPrinter());
+            }
+            else if (arg_type == "lpcwstr" || arg_type == "lpwstr")
+            {
+                e.argument_printers.push_back(new WideStringPrinter());
+            }
+            else if (arg_type == "punicode_string")
+            {
+                e.argument_printers.push_back(new UnicodePrinter());
+            }
+            else
+            {
+                e.argument_printers.push_back(new ArgumentPrinter());
+            }
+        }
+
+        wanted_hooks->push_back(e);
+    }
+}

@@ -115,6 +115,16 @@
 
 typedef event_response_t (*callback_t)(drakvuf_t drakvuf, drakvuf_trap_info* info);
 
+struct plugin_target_config_entry_t
+{
+    std::string dll_name;
+    std::string function_name;
+    std::string strategy;
+    std::vector<ArgumentPrinter> argument_printers;
+
+    plugin_target_config_entry_t() : dll_name(), function_name(), strategy(), argument_printers() {}
+};
+
 enum target_hook_state
 {
     HOOK_FIRST_TRY,
@@ -173,5 +183,6 @@ typedef enum usermode_reg_status {
 
 usermode_reg_status_t drakvuf_register_usermode_callback(drakvuf_t drakvuf, usermode_cb_registration* reg);
 bool drakvuf_request_usermode_hook(drakvuf_t drakvuf, const dll_view_t* dll, const char* func_name, callback_t callback, std::vector< ArgumentPrinter* > argument_printers, void* extra);
+void drakvuf_load_dll_hook_config(drakvuf_t drakvuf, const char* dll_hooks_list_path, std::vector<plugin_target_config_entry_t>* wanted_hooks);
 
 #endif

@@ -333,73 +333,12 @@ static void on_dll_hooked(drakvuf_t drakvuf, const dll_view_t* dll, void* extra)
     PRINT_DEBUG("[APIMON] DLL hooked - done\n");
 }
 
-// TODO repeated code
-void apimon::load_wanted_targets(const apimon_config* c)
-{
-    if (!c->dll_hooks_list)
-    {
-        // if the DLL hook list was not provided, we provide some simple defaults
-        this->wanted_hooks.emplace_back("ws2_32.dll", "WSAStartup", "log+stack", std::vector<ArgumentPrinter*> { new ArgumentPrinter(), new ArgumentPrinter() });
-        this->wanted_hooks.emplace_back("ntdll.dll", "RtlExitUserProcess", "log+stack", std::vector<ArgumentPrinter*> { new ArgumentPrinter(), new ArgumentPrinter() });
-        return;
-    }
-
-    std::ifstream ifs(c->dll_hooks_list, std::ifstream::in);
-
-    if (!ifs)
-    {
-        throw -1;
-    }
-
-    std::string line;
-    while (std::getline(ifs, line))
-    {
-        if (line.empty() || line[0] == '#')
-            continue;
-
-        std::stringstream ss(line);
-        api_target_config_entry_t e;
-
-        std::string arg_type;
-        if (!std::getline(ss, e.dll_name, ',') || e.dll_name.empty())
-            throw -1;
-        if (!std::getline(ss, e.function_name, ',') || e.function_name.empty())
-            throw -1;
-        if (!std::getline(ss, e.strategy, ',') || e.strategy.empty())
-            throw -1;
-
-        while (std::getline(ss, arg_type, ',') && !arg_type.empty())
-        {
-            if (arg_type == "lpcstr" || arg_type == "lpctstr")
-            {
-                e.argument_printers.push_back(new AsciiPrinter());
-            }
-            else if (arg_type == "lpcwstr" || arg_type == "lpwstr")
-            {
-                e.argument_printers.push_back(new WideStringPrinter());
-            }
-            else if (arg_type == "punicode_string")
-            {
-                e.argument_printers.push_back(new UnicodePrinter());
-            }
-            else
-            {
-                e.argument_printers.push_back(new ArgumentPrinter());
-            }
-        }
-
-        if (e.strategy == "log" || e.strategy == "log+stack") {
-            this->wanted_hooks.push_back(e);
-        }
-    }
-}
-
 apimon::apimon(drakvuf_t drakvuf, const apimon_config* c, output_format_t output)
     : pluginex(drakvuf, output)
 {
     try
     {
-        this->load_wanted_targets(c);
+        drakvuf_load_dll_hook_config(drakvuf, c->dll_hooks_list, &this->wanted_hooks);
     }
     catch (int e)
     {

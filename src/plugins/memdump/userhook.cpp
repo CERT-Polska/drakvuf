@@ -172,54 +172,11 @@ static void on_dll_hooked(drakvuf_t drakvuf, const dll_view_t* dll, void* extra)
     PRINT_DEBUG("[MEMDUMP] DLL hooked - done\n");
 }
 
-void memdump::load_wanted_targets(const memdump_config* c)
-{
-    if (!c->dll_hooks_list)
-    {
-        // if the DLL hook list was not provided, we provide some simple defaults
-        this->wanted_hooks.emplace_back("ws2_32.dll", "WSAStartup", "log+stack");
-        this->wanted_hooks.emplace_back("ntdll.dll", "RtlExitUserProcess", "log+stack");
-        return;
-    }
-
-    std::ifstream ifs(c->dll_hooks_list, std::ifstream::in);
-
-    if (!ifs)
-    {
-        throw -1;
-    }
-
-    std::string line;
-    while (std::getline(ifs, line))
-    {
-        if (line.empty() || line[0] == '#')
-            continue;
-
-        std::stringstream ss(line);
-        target_config_entry_t e;
-
-        std::string arg_type;
-        if (!std::getline(ss, e.dll_name, ',') || e.dll_name.empty())
-            throw -1;
-        if (!std::getline(ss, e.function_name, ',') || e.function_name.empty())
-            throw -1;
-        if (!std::getline(ss, e.strategy, ',') || e.strategy.empty())
-            throw -1;
-
-        // just ignore the argument types provided
-        while (std::getline(ss, arg_type, ',') && !arg_type.empty());
-
-        if (e.strategy == "stack" || e.strategy == "log+stack") {
-            this->wanted_hooks.push_back(e);
-        }
-    }
-}
-
 void memdump::userhook_init(drakvuf_t drakvuf, const memdump_config* c, output_format_t output)
 {
     try
     {
-        this->load_wanted_targets(c);
+        drakvuf_load_dll_hook_config(drakvuf, c->dll_hooks_list, &this->wanted_hooks);
     }
     catch (int e)
     {
@@ -249,7 +206,7 @@ void memdump::userhook_init(drakvuf_t drakvuf, const memdump_config* c, output_f
     }
 }
 
-void memdump::userhook_destroy(memdump* plugin)
+void memdump::userhook_destroy()
 {
 
 }
