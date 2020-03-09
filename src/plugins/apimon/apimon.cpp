@@ -209,8 +209,8 @@ static event_response_t usermode_return_hook_cb(drakvuf_t drakvuf, drakvuf_trap_
     }
     printf("\n");
 
-    drakvuf_remove_trap(drakvuf, info->trap, nullptr);
-    delete ret_target;
+    drakvuf_remove_trap(drakvuf, info->trap, (drakvuf_trap_free_t)g_free);
+    g_free(ret_target);
     return VMI_EVENT_RESPONSE_NONE;
 }
 
@@ -251,8 +251,11 @@ static event_response_t usermode_hook_cb(drakvuf_t drakvuf, drakvuf_trap_info* i
         success = vmi_read_64(lg.vmi, &ctx, &ret_addr) == VMI_SUCCESS;
     }
 
-    return_hook_target_entry_t* ret_target = new return_hook_target_entry_t(target->pid, target->plugin, target->argument_printers);
-    drakvuf_trap_t* trap = new drakvuf_trap_t;
+    return_hook_target_entry_t* ret_target = (return_hook_target_entry_t*)g_try_malloc0(sizeof(return_hook_target_entry_t));
+    ret_target.pid = target->pid;
+    ret_target.plugin = target->plugin;
+    ret_target.argument_printers = target->argument_printers;
+    drakvuf_trap_t* trap = (drakvuf_trap_t*)g_try_malloc0(sizeof(drakvuf_trap_t));
 
     for (size_t i = 1; i <= target->argument_printers.size(); i++)
     {
@@ -264,8 +267,8 @@ static event_response_t usermode_hook_cb(drakvuf_t drakvuf, drakvuf_trap_info* i
 
     if ( VMI_SUCCESS != vmi_pagetable_lookup(lg.vmi, info->regs->cr3, ret_addr, &paddr) )
     {
-        delete trap;
-        delete ret_target;
+        g_free(trap);
+        g_free(ret_target);
         return VMI_EVENT_RESPONSE_NONE;
 
     }
@@ -286,8 +289,8 @@ static event_response_t usermode_hook_cb(drakvuf_t drakvuf, drakvuf_trap_info* i
     else
     {
         PRINT_DEBUG("[APIMON-USER] Failed to add trap :(\n");
-        delete trap;
-        delete ret_target;
+        g_free(trap);
+        g_free(ret_target);
     }
 
     return VMI_EVENT_RESPONSE_NONE;
