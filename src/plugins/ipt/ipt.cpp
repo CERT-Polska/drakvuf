@@ -8,7 +8,7 @@
  * CLARIFICATIONS AND EXCEPTIONS DESCRIBED HEREIN.  This guarantees your   *
  * right to use, modify, and redistribute this software under certain      *
  * conditions.  If you wish to embed DRAKVUF technology into proprietary   *
- * software, alternative licenses can be acquired from the author.         *
+ * software, alternative licenses can be aquired from the author.          *
  *                                                                         *
  * Note that the GPL places important restrictions on "derivative works",  *
  * yet it does not provide a detailed definition of that term.  To avoid   *
@@ -102,243 +102,220 @@
  *                                                                         *
  ***************************************************************************/
 
-#ifndef DRAKVUF_PLUGINS_H
-#define DRAKVUF_PLUGINS_H
-
 #include <config.h>
+#include <filesystem>
 #include <array>
-#include <memory>
-#include <stdlib.h>
+#include <sstream>
 #include <inttypes.h>
-#include <sys/time.h>
-#include <libdrakvuf/libdrakvuf.h>
+#include <sys/stat.h>
+#include <libvmi/libvmi.h>
 
-#include <unordered_map>
+#include "ipt.h"
+#include "plugins/output_format.h"
+#include "private.h"
 
-struct plugins_options
+namespace
 {
-    const char* dump_folder;            // PLUGIN_FILEDELETE
-    bool dump_modified_files;           // PLUGIN_FILEDELETE
-    bool filedelete_use_injector;       // PLUGIN_FILEDELETE
-    bool cpuid_stealth;                 // PLUGIN_CPUIDMON
-    const char* tcpip_profile;          // PLUGIN_SOCKETMON
-    const char* win32k_profile;         // PLUGIN_CLIPBOARDMON, PLUGIN_WINDOWMON, PLUGIN_SYSCALLS
-    const char* sspicli_profile;        // PLUGIN_ENVMON
-    const char* kernel32_profile;       // PLUGIN_ENVMON
-    const char* kernelbase_profile;     // PLUGIN_ENVMON
-    const char* wow_kernel32_profile;   // PLUGIN_ENVMON
-    const char* iphlpapi_profile;       // PLUGIN_ENVMON
-    const char* mpr_profile;            // PLUGIN_ENVMON
-    const char* syscalls_filter_file;   // PLUGIN_SYSCALLS
-    bool disable_sysret;                // PLUGIN_SYSCALLS
-    bool abort_on_bsod;                 // PLUGIN_BSODMON
-    const char* ntdll_profile;          // PLUGIN_LIBRARYMON
-    const char* ole32_profile;          // PLUGIN_WMIMON
-    const char* wow_ole32_profile;      // PLUGIN_WMIMON
-    const char* combase_profile;        // PLUGIN_WMIMON
-    const char* memdump_dir;            // PLUGIN_MEMDUMP
-    bool memdump_disable_free_vm;       // PLUGIN_MEMDUMP
-    bool memdump_disable_protect_vm;    // PLUGIN_MEMDUMP
-    bool memdump_disable_write_vm;      // PLUGIN_MEMDUMP
-    bool memdump_disable_terminate_proc;// PLUGIN_MEMDUMP
-    bool memdump_disable_create_thread; // PLUGIN_MEMDUMP
-    bool memdump_disable_set_thread;    // PLUGIN_MEMDUMP
-    const char* dll_hooks_list;         // PLUGIN_MEMDUMP, PLUGIN_APIMON
-    bool userhook_no_addr;              // PLUGIN_MEMDUMP, PLUGIN_APIMON
-    const char* procdump_dir;           // PLUGIN_PROCDUMP
-    bool compress_procdumps = false;    // PLUGIN_PROCDUMP
-    const char* clr_profile;            // PLUGIN_MEMDUMP
-    const char* mscorwks_profile;       // PLUGIN_MEMDUMP
-    std::shared_ptr<std::unordered_map<vmi_pid_t, bool>> terminated_processes; // PLUGIN_PROCDUMP
-    const char* codemon_dump_dir;       // PLUGIN_CODEMON
-    const char* codemon_filter_executable;  // PLUGIN_CODEMON
-    bool codemon_log_everything;        // PLUGIN_CODEMON
-    bool codemon_dump_vad;              // PLUGIN_CODEMON
-    bool codemon_analyse_system_dll_vad;    // PLUGIN_CODEMON
-    bool codemon_default_benign;        // PLUGIN_CODEMON
-    const char* ipt_dir;                // PLUGIN_IPT
-    bool ipt_trace_os;                  // PLUGIN_IPT
-    bool ipt_trace_user;                // PLUGIN_IPT
-};
 
-typedef enum drakvuf_plugin
+uint64_t pack_payload(uint32_t cmd, uint32_t data)
 {
-    PLUGIN_SYSCALLS,
-    PLUGIN_POOLMON,
-    PLUGIN_FILETRACER,
-    PLUGIN_FILEDELETE,
-    PLUGIN_OBJMON,
-    PLUGIN_EXMON,
-    PLUGIN_SSDTMON,
-    PLUGIN_DEBUGMON,
-    PLUGIN_DELAYMON,
-    PLUGIN_CPUIDMON,
-    PLUGIN_SOCKETMON,
-    PLUGIN_REGMON,
-    PLUGIN_PROCMON,
-    PLUGIN_BSODMON,
-    PLUGIN_ENVMON,
-    PLUGIN_CRASHMON,
-    PLUGIN_CLIPBOARDMON,
-    PLUGIN_WINDOWMON,
-    PLUGIN_LIBRARYMON,
-    PLUGIN_DKOMMON,
-    PLUGIN_WMIMON,
-    PLUGIN_MEMDUMP,
-    PLUGIN_APIMON,
-    PLUGIN_PROCDUMP,
-    PLUGIN_RPCMON,
-    PLUGIN_TLSMON,
-    PLUGIN_CODEMON,
-    PLUGIN_IPT,
-    __DRAKVUF_PLUGIN_LIST_MAX
-} drakvuf_plugin_t;
+    return (static_cast<uint64_t>(cmd) << 32) | data;
+}
 
-static const char* drakvuf_plugin_names[] =
+void emit_ptwrite64(std::ofstream& stream, uint64_t payload)
 {
-    [PLUGIN_SYSCALLS] = "syscalls",
-    [PLUGIN_POOLMON] = "poolmon",
-    [PLUGIN_FILETRACER] = "filetracer",
-    [PLUGIN_FILEDELETE] = "filedelete",
-    [PLUGIN_OBJMON] = "objmon",
-    [PLUGIN_EXMON] = "exmon",
-    [PLUGIN_SSDTMON] = "ssdtmon",
-    [PLUGIN_DEBUGMON] = "debugmon",
-    [PLUGIN_DELAYMON] = "delaymon",
-    [PLUGIN_CPUIDMON] = "cpuidmon",
-    [PLUGIN_SOCKETMON] = "socketmon",
-    [PLUGIN_REGMON] = "regmon",
-    [PLUGIN_PROCMON] = "procmon",
-    [PLUGIN_BSODMON] = "bsodmon",
-    [PLUGIN_ENVMON] = "envmon",
-    [PLUGIN_CRASHMON] = "crashmon",
-    [PLUGIN_CLIPBOARDMON] = "clipboardmon",
-    [PLUGIN_WINDOWMON] = "windowmon",
-    [PLUGIN_LIBRARYMON] = "librarymon",
-    [PLUGIN_DKOMMON] = "dkommon",
-    [PLUGIN_WMIMON] = "wmimon",
-    [PLUGIN_MEMDUMP] = "memdump",
-    [PLUGIN_APIMON] = "apimon",
-    [PLUGIN_PROCDUMP] = "procdump",
-    [PLUGIN_RPCMON] = "rpcmon",
-    [PLUGIN_TLSMON] = "tlsmon",
-    [PLUGIN_CODEMON] = "codemon",
-    [PLUGIN_IPT] = "ipt",
-};
+    // ptwrite packet
+    stream.put(0x02);
+    // no FUP, 8 bytes of payload
+    stream.put(0x32);
+    stream.write(reinterpret_cast<char*>(&payload), sizeof(payload));
+}
 
-static const bool drakvuf_plugin_os_support[__DRAKVUF_PLUGIN_LIST_MAX][VMI_OS_WINDOWS+1] =
+
+event_response_t ipt_cr3_cb(drakvuf_t drakvuf, drakvuf_trap_info_t* info)
 {
-    [PLUGIN_SYSCALLS]     = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 1 },
-    [PLUGIN_POOLMON]      = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 0 },
-    [PLUGIN_FILETRACER]   = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 1 },
-    [PLUGIN_FILEDELETE]   = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 0 },
-    [PLUGIN_OBJMON]       = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 0 },
-    [PLUGIN_EXMON]        = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 0 },
-    [PLUGIN_SSDTMON]      = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 0 },
-    [PLUGIN_DEBUGMON]     = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 1 },
-    [PLUGIN_DELAYMON]     = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 0 },
-    [PLUGIN_CPUIDMON]     = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 1 },
-    [PLUGIN_SOCKETMON]    = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 0 },
-    [PLUGIN_REGMON]       = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 0 },
-    [PLUGIN_PROCMON]      = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 0 },
-    [PLUGIN_BSODMON]      = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 0 },
-    [PLUGIN_ENVMON]       = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 0 },
-    [PLUGIN_CRASHMON]     = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 0 },
-    [PLUGIN_CLIPBOARDMON] = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 0 },
-    [PLUGIN_WINDOWMON]    = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 0 },
-    [PLUGIN_LIBRARYMON]   = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 0 },
-    [PLUGIN_DKOMMON]      = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 0 },
-    [PLUGIN_WMIMON]       = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 0 },
-    [PLUGIN_MEMDUMP]      = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 0 },
-    [PLUGIN_APIMON]       = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 0 },
-    [PLUGIN_PROCDUMP]     = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 0 },
-    [PLUGIN_RPCMON]       = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 0 },
-    [PLUGIN_TLSMON]       = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 0 },
-    [PLUGIN_CODEMON]      = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 0 },
-    [PLUGIN_IPT]          = { [VMI_OS_WINDOWS] = 1, [VMI_OS_LINUX] = 1 },
-};
+    auto plugin = get_trap_plugin<ipt>(info);
+    auto& vcpu = plugin->vcpus[info->vcpu];
 
-class plugin
+    vcpu.flush(info->regs->vmtrace_pos);
+
+    vcpu.annotate(pack_payload(PTW_CURRENT_CR3, info->regs->cr3));
+    vcpu.annotate(pack_payload(PTW_CURRENT_TID, info->proc_data.tid));
+
+    return VMI_EVENT_RESPONSE_NONE;
+}
+
+event_response_t ipt_catchall_cb(drakvuf_t drakvuf, drakvuf_trap_info_t* info)
 {
-public:
-    virtual ~plugin() = default;
+    auto plugin = get_trap_plugin<ipt>(info);
+    auto& vcpu = plugin->vcpus[info->vcpu];
 
-    virtual bool stop()
+    vcpu.flush(info->regs->vmtrace_pos);
+
+    vcpu.annotate(pack_payload(PTW_EVENT_ID, info->event_uid));
+
+    return VMI_EVENT_RESPONSE_NONE;
+}
+
+} // unnamed namespace
+
+void ipt_vcpu::annotate(uint64_t payload)
+{
+    emit_ptwrite64(this->output_stream, payload);
+}
+
+void ipt_vcpu::flush(uint64_t offset)
+{
+    // update last offset
+    uint64_t prev = this->last_offset;
+    this->last_offset = offset;
+
+    using ull = unsigned long long;
+    PRINT_DEBUG("[IPT] Flushing vCPU %d offset: %llx last offset: %llx\n",
+        id, static_cast<ull>(offset), static_cast<ull>(prev));
+
+    if (!this->output_stream.good())
     {
-        m_is_stopping = true;
-        return true;
+        throw -1;
     }
 
-    virtual bool is_stopping()
+    // Cast uint8_t* to char* to satisfy std::ofstream requirements
+    // https://stackoverflow.com/questions/16260033/reinterpret-cast-between-char-and-stduint8-t-safe
+    auto data = reinterpret_cast<char*>(this->buf);
+    if (offset > prev)
     {
-        return m_is_stopping;
+        // Normal case, some data was appended to buffer
+        this->output_stream.write(data + prev, offset - prev);
     }
+    else if (offset < prev)
+    {
+        // Buffer wrapped - write from last offset to the end of the buffer
+        // and then from the beginning to last written packet
+        // This assumes that IPT buffer is large enough to not overflow between
+        // calls to ipt_annotate
+        this->output_stream.write(data + prev, this->size - prev);
+        this->output_stream.write(data, offset);
+    }
+    else
+    {
+        PRINT_DEBUG("[IPT] flush_ipt_stream() called but no new IPT data is present\n");
+        // In theory this should be unreachable, since it's hard to generate
+        // no data between events. Handle this, just in case something is wrong
+        this->annotate(pack_payload(PTW_ERROR_EMPTY, 0));
+    }
+}
 
-protected:
-    bool m_is_stopping = false;
-};
 
-class drakvuf_plugins
+ipt::ipt(drakvuf_t drakvuf, const ipt_config& config, output_format_t output)
+    : pluginex(drakvuf, output)
+    , num_vcpus_{0}
+    , drakvuf_{drakvuf}
 {
-private:
-    drakvuf_t drakvuf;
-    output_format_t output;
-    os_t os;
-    std::array<std::unique_ptr<plugin>, __DRAKVUF_PLUGIN_LIST_MAX> plugins;
-
-public:
-    drakvuf_plugins(drakvuf_t drakvuf, output_format_t output, os_t os);
-    int start(drakvuf_plugin_t plugin, const plugins_options* config);
-    int stop(drakvuf_plugin_t plugin);
-    bool is_stopped(drakvuf_plugin_t plugin);
-};
-
-/***************************************************************************/
-
-struct vmi_lock_guard
-{
-    vmi_lock_guard(drakvuf_t drakvuf_) : drakvuf(drakvuf_), vmi()
+    if (!config.ipt_dir)
     {
-        lock();
+        PRINT_DEBUG("[IPT] Target directory not provided, not activating IPT plugin\n");
+        return;
     }
 
-    vmi_instance_t lock()
+    auto ipt_dir = std::filesystem::path(config.ipt_dir);
+    if (!std::filesystem::is_directory(ipt_dir))
     {
-        if (!vmi)
-            vmi = drakvuf_lock_and_get_vmi(drakvuf);
-
-        return vmi;
-    }
-
-    bool unlock()
-    {
-        if (vmi)
+        PRINT_DEBUG("[IPT] Target directory doesn't exist. Creating...\n");
+        if (!std::filesystem::create_directory(ipt_dir))
         {
-            drakvuf_release_vmi(drakvuf);
-            vmi = nullptr;
-            return true;
+            PRINT_DEBUG("[IPT] Failed to create %s directory\n", ipt_dir.c_str());
+            throw -1;
         }
-        return false;
-
     }
 
-    bool is_lock() const
     {
-        return vmi == nullptr ? true : false;
+        auto vmi = vmi_lock_guard(drakvuf);
+        num_vcpus_ = vmi_get_num_vcpus(vmi);
+
+        // This is a DRAKVUF limitation
+        if (num_vcpus_ > MAX_DRAKVUF_VCPU)
+        {
+            PRINT_DEBUG("[IPT] Only first %d vCPUs will be traced\n", MAX_DRAKVUF_VCPU);
+            num_vcpus_ = MAX_DRAKVUF_VCPU;
+        }
     }
 
-    operator vmi_instance_t() const
+    // Always trace code branches, traces become kinda boring without them
+    // Ret compression may be sometimes problematic to reconstruct, disable it
+    uint64_t ipt_flags = DRAKVUF_IPT_BRANCH_EN | DRAKVUF_IPT_DIS_RETC;
+
+    if (config.trace_os)
     {
-        return vmi;
+        PRINT_DEBUG("[IPT] Tracing OS\n");
+        ipt_flags |= DRAKVUF_IPT_TRACE_OS;
     }
-
-    ~vmi_lock_guard()
+    if (config.trace_user)
     {
-        unlock();
+        PRINT_DEBUG("[IPT] Tracing userspace\n");
+        ipt_flags |= DRAKVUF_IPT_TRACE_USR;
     }
 
-    drakvuf_t drakvuf;
-    vmi_instance_t vmi;
-};
+    for (int i = 0; i < num_vcpus_; i++)
+    {
+        auto& vcpu = this->vcpus[i];
+        vcpu.id = i;
+        vcpu.last_offset = 0;
+        if (!drakvuf_enable_ipt(drakvuf, i, &vcpu.buf, &vcpu.size, ipt_flags))
+        {
+            PRINT_DEBUG("[IPT] Failed to enable IPT on vCPU %d\n", i);
+            throw -1;
+        }
 
-#endif
+        std::stringstream ss;
+        ss << "ipt_stream_vcpu" << i;
+        auto stream_path = ipt_dir / ss.str();
+
+        vcpu.output_stream = std::ofstream(stream_path, std::ios::binary);
+        if (!vcpu.output_stream.is_open())
+        {
+            PRINT_DEBUG("Failed to open stream file for vCPU %d\n", i);
+            throw -1;
+        }
+    }
+
+
+    auto tr1 = register_trap(nullptr, &::ipt_cr3_cb,
+                             [](auto drakvuf, auto info, auto trap) -> drakvuf_trap_t*
+    {
+        trap->type = REGISTER;
+        trap->reg = CR3;
+
+        if (!drakvuf_add_trap(drakvuf, trap))
+            return nullptr;
+        return trap;
+    }, "ipt_cr3", UNLIMITED_TTL);
+
+    if (!tr1)
+    {
+        PRINT_DEBUG("[IPT] Failed to register CR3 trap");
+        throw -1;
+    }
+
+    auto tr2 = register_trap(nullptr, &::ipt_catchall_cb,
+                             [](auto drakvuf, auto info, auto trap) -> drakvuf_trap_t*
+    {
+        trap->type = CATCHALL_BREAKPOINT;
+        if (!drakvuf_add_trap(drakvuf, trap))
+            return nullptr;
+        return trap;
+    }, "ipt_catchall", UNLIMITED_TTL);
+
+    if (!tr2)
+    {
+        PRINT_DEBUG("[IPT] Failed to register catchall trap");
+        throw -1;
+    }
+}
+
+ipt::~ipt()
+{
+    for (int i = 0; i < num_vcpus_; i++)
+    {
+        drakvuf_disable_ipt(drakvuf_, i);
+    }
+}

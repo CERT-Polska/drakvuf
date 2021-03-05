@@ -131,6 +131,7 @@
 #include "rpcmon/rpcmon.h"
 #include "tlsmon/tlsmon.h"
 #include "codemon/codemon.h"
+#include "ipt/ipt.h"
 
 drakvuf_plugins::drakvuf_plugins(const drakvuf_t _drakvuf, output_format_t _output, os_t _os)
     : drakvuf{ _drakvuf }, output{ _output }, os{ _os }
@@ -391,6 +392,18 @@ int drakvuf_plugins::start(const drakvuf_plugin_t plugin_id,
                     };
                     this->plugins[plugin_id] = std::make_unique<codemon>(this->drakvuf, &config, this->output);
                     break;
+                }
+#endif
+#ifdef ENABLE_PLUGIN_IPT
+                case PLUGIN_IPT:
+                {
+                    ipt_config config =
+                    {
+                        .ipt_dir = options->ipt_dir,
+                        .trace_os = options->ipt_trace_os,
+                        .trace_user = options->ipt_trace_user,
+                    };
+                    this->plugins[plugin_id] = std::make_unique<ipt>(this->drakvuf, config, this->output);
                 }
 #endif
                 case __DRAKVUF_PLUGIN_LIST_MAX: /* fall-through */

@@ -294,6 +294,14 @@ static void print_usage()
             "\t --codemon-default-benign\n"
             "\t                           By default we assume everything to be malware. If this flag is enabled we assume all analysed memory areas to be goodware instead. This flag should be just set if a classifier is integrated\n"
 #endif
+#ifdef ENABLE_PLUGIN_IPT
+            "\t --ipt-dir <directory>\n"
+            "\t                           Where to store data recorded with Intel Processor Trace\n"
+            "\t --ipt-trace-os\n"
+            "\t                           Enable IPT tracing in ring 0"
+            "\t --ipt-trace-user\n"
+            "\t                           Enable IPT tracing in ring > 0"
+#endif
             "\t -h, --help                Show this help\n"
            );
 }
@@ -381,6 +389,9 @@ int main(int argc, char** argv)
         opt_codemon_dump_vad,
         opt_codemon_analyse_system_dll_vad,
         opt_codemon_default_benign,
+        opt_ipt_dir,
+        opt_ipt_trace_os,
+        opt_ipt_trace_user,
     };
     const option long_opts[] =
     {
@@ -427,9 +438,9 @@ int main(int argc, char** argv)
         {"codemon-dump-vad", no_argument, NULL, opt_codemon_dump_vad},
         {"codemon-analyse-system-dll-vad", no_argument, NULL, opt_codemon_analyse_system_dll_vad},
         {"codemon-default-benign", no_argument, NULL, opt_codemon_default_benign},
-
-
-
+        {"ipt-dir", required_argument, NULL, opt_ipt_dir},
+        {"ipt-trace-os", no_argument, NULL, opt_ipt_trace_os},
+        {"ipt-trace-user", no_argument, NULL, opt_ipt_trace_user},
         {NULL, 0, NULL, 0}
     };
     const char* opts = "r:d:i:I:e:m:t:D:o:vx:a:f:spT:S:Mc:nblgj:k:w:W:hF";
@@ -673,6 +684,16 @@ int main(int argc, char** argv)
                 break;
             case opt_codemon_default_benign:
                 options.codemon_default_benign = true;
+#endif
+#ifdef ENABLE_PLUGIN_IPT
+            case opt_ipt_dir:
+                options.ipt_dir = optarg;
+                break;
+            case opt_ipt_trace_os:
+                options.ipt_trace_os = true;
+                break;
+            case opt_ipt_trace_user:
+                options.ipt_trace_user = true;
                 break;
 #endif
             case 'h':
