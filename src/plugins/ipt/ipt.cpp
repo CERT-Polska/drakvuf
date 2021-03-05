@@ -172,7 +172,7 @@ void ipt_vcpu::flush(uint64_t offset)
 
     using ull = unsigned long long;
     PRINT_DEBUG("[IPT] Flushing vCPU %d offset: %llx last offset: %llx\n",
-        id, static_cast<ull>(offset), static_cast<ull>(prev));
+                id, static_cast<ull>(offset), static_cast<ull>(prev));
 
     if (!this->output_stream.good())
     {
