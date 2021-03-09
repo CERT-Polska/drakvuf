@@ -103,7 +103,6 @@
  ***************************************************************************/
 
 #include <config.h>
-#include <filesystem>
 #include <array>
 #include <sstream>
 #include <inttypes.h>
@@ -111,6 +110,7 @@
 #include <libvmi/libvmi.h>
 
 #include "ipt.h"
+#include <plugins/filesystem.hpp>
 #include "plugins/output_format.h"
 #include "private.h"
 
