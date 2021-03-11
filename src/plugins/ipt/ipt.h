@@ -162,6 +162,9 @@ public:
 
     ipt(drakvuf_t drakvuf, const ipt_config& config, output_format_t output);
     ~ipt();
+
+    static drakvuf_trap_t* reg_cr3_trap(drakvuf_t drakvuf, drakvuf_trap_info_t* info, drakvuf_trap_t* trap);
+    static drakvuf_trap_t* reg_catchall_trap(drakvuf_t drakvuf, drakvuf_trap_info_t* info, drakvuf_trap_t* trap);
 };
 
 #endif

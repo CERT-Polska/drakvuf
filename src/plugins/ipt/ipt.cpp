@@ -205,7 +205,7 @@ void ipt_vcpu::flush(uint64_t offset)
 }
 
 
-drakvuf_trap_t* reg_cr3_trap(drakvuf_t drakvuf, drakvuf_trap_info_t* info, drakvuf_trap_t* trap)
+drakvuf_trap_t* ipt::reg_cr3_trap(drakvuf_t drakvuf, drakvuf_trap_info_t* info, drakvuf_trap_t* trap)
 {
     trap->type = REGISTER;
     trap->reg = CR3;
@@ -216,7 +216,7 @@ drakvuf_trap_t* reg_cr3_trap(drakvuf_t drakvuf, drakvuf_trap_info_t* info, drakv
     return trap;
 }
 
-drakvuf_trap_t* reg_catchall_trap(drakvuf_t drakvuf, drakvuf_trap_info_t* info, drakvuf_trap_t* trap)
+drakvuf_trap_t* ipt::reg_catchall_trap(drakvuf_t drakvuf, drakvuf_trap_info_t* info, drakvuf_trap_t* trap)
 {
     trap->type = CATCHALL_BREAKPOINT;
 
@@ -299,7 +299,7 @@ ipt::ipt(drakvuf_t drakvuf, const ipt_config& config, output_format_t output)
     }
 
 
-    auto tr1 = register_trap(nullptr, &::ipt_cr3_cb, reg_cr3_trap, "ipt_cr3", UNLIMITED_TTL);
+    auto tr1 = register_trap(nullptr, &::ipt_cr3_cb, ipt::reg_cr3_trap, "ipt_cr3", UNLIMITED_TTL);
 
     if (!tr1)
     {
@@ -307,7 +307,7 @@ ipt::ipt(drakvuf_t drakvuf, const ipt_config& config, output_format_t output)
         throw -1;
     }
 
-    auto tr2 = register_trap(nullptr, &::ipt_catchall_cb, reg_catchall_trap, "ipt_catchall", UNLIMITED_TTL);
+    auto tr2 = register_trap(nullptr, &::ipt_catchall_cb, ipt::reg_catchall_trap, "ipt_catchall", UNLIMITED_TTL);
 
     if (!tr2)
     {
