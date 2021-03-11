@@ -170,9 +170,8 @@ void ipt_vcpu::flush(uint64_t offset)
     uint64_t prev = this->last_offset;
     this->last_offset = offset;
 
-    using ull = unsigned long long;
-    PRINT_DEBUG("[IPT] Flushing vCPU %d offset: %llx last offset: %llx\n",
-                id, static_cast<ull>(offset), static_cast<ull>(prev));
+    PRINT_DEBUG("[IPT] Flushing vCPU %d offset: %" PRIx64 " last offset: %" PRIx64 "\n",
+                id, offset, prev);
 
     if (!this->output_stream.good())
     {
@@ -205,6 +204,27 @@ void ipt_vcpu::flush(uint64_t offset)
     }
 }
 
+
+drakvuf_trap_t* reg_cr3_trap(drakvuf_t drakvuf, drakvuf_trap_info_t* info, drakvuf_trap_t* trap)
+{
+    trap->type = REGISTER;
+    trap->reg = CR3;
+
+    if (!drakvuf_add_trap(drakvuf, trap))
+        return nullptr;
+
+    return trap;
+}
+
+drakvuf_trap_t* reg_catchall_trap(drakvuf_t drakvuf, drakvuf_trap_info_t* info, drakvuf_trap_t* trap)
+{
+    trap->type = CATCHALL_BREAKPOINT;
+
+    if (!drakvuf_add_trap(drakvuf, trap))
+        return nullptr;
+
+    return trap;
+}
 
 ipt::ipt(drakvuf_t drakvuf, const ipt_config& config, output_format_t output)
     : pluginex(drakvuf, output)
@@ -279,16 +299,7 @@ ipt::ipt(drakvuf_t drakvuf, const ipt_config& config, output_format_t output)
     }
 
 
-    auto tr1 = register_trap(nullptr, &::ipt_cr3_cb,
-                             [](auto drakvuf, auto info, auto trap) -> drakvuf_trap_t*
-    {
-        trap->type = REGISTER;
-        trap->reg = CR3;
-
-        if (!drakvuf_add_trap(drakvuf, trap))
-            return nullptr;
-        return trap;
-    }, "ipt_cr3", UNLIMITED_TTL);
+    auto tr1 = register_trap(nullptr, &::ipt_cr3_cb, reg_cr3_trap, "ipt_cr3", UNLIMITED_TTL);
 
     if (!tr1)
     {
@@ -296,14 +307,7 @@ ipt::ipt(drakvuf_t drakvuf, const ipt_config& config, output_format_t output)
         throw -1;
     }
 
-    auto tr2 = register_trap(nullptr, &::ipt_catchall_cb,
-                             [](auto drakvuf, auto info, auto trap) -> drakvuf_trap_t*
-    {
-        trap->type = CATCHALL_BREAKPOINT;
-        if (!drakvuf_add_trap(drakvuf, trap))
-            return nullptr;
-        return trap;
-    }, "ipt_catchall", UNLIMITED_TTL);
+    auto tr2 = register_trap(nullptr, &::ipt_catchall_cb, reg_catchall_trap, "ipt_catchall", UNLIMITED_TTL);
 
     if (!tr2)
     {
