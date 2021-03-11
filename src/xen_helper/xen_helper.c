@@ -362,7 +362,7 @@ bool xen_enable_ipt(xen_interface_t* xen, domid_t domID, unsigned int vcpu, ipt_
 
     if (rc)
     {
-        fprintf(stderr, "Failed to enable tracing\n");
+        fprintf(stderr, "Failed to enable tracing, vcpu=%d, rc=%d\n", vcpu, rc);
         goto unmap;
     }
 
