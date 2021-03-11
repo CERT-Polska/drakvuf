@@ -391,7 +391,7 @@ int drakvuf_plugins::start(const drakvuf_plugin_t plugin_id,
                         .codemon_default_benign = options->codemon_default_benign,
                     };
                     this->plugins[plugin_id] = std::make_unique<codemon>(this->drakvuf, &config, this->output);
-		    break;
+                    break;
                 }
 #endif
 #ifdef ENABLE_PLUGIN_IPT
@@ -404,7 +404,7 @@ int drakvuf_plugins::start(const drakvuf_plugin_t plugin_id,
                         .trace_user = options->ipt_trace_user,
                     };
                     this->plugins[plugin_id] = std::make_unique<ipt>(this->drakvuf, config, this->output);
-		    break;
+                    break;
                 }
 #endif
                 case __DRAKVUF_PLUGIN_LIST_MAX: /* fall-through */
