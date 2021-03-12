@@ -72,7 +72,6 @@ cp package/postrm deb/DEBIAN/postrm
 chown -R root:root deb
 dpkg-deb --build -z0 deb "xen-hypervisor-$xenversion-$distro-amd64.deb"
 mv *.deb /out
-rm -rf deb
 
 ## DRAKVUF, LibVMI & tools
 
