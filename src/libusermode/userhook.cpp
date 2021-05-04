@@ -175,6 +175,29 @@ static dll_t* get_pending_dll(drakvuf_t drakvuf, drakvuf_trap_info* info, userho
 }
 
 /**
+ * Check if given mmvad contains valid PE header at the beginning.
+ */
+static bool check_pe_image(drakvuf_t drakvuf, const drakvuf_trap_info *info, const mmvad_info_t &mmvad)
+{
+    addr_t vad_start = mmvad.starting_vpn << 12;
+    size_t vad_length = (mmvad.ending_vpn - mmvad.starting_vpn + 1) << 12;
+
+    ACCESS_CONTEXT(ctx,
+        .translate_mechanism = VMI_TM_PROCESS_DTB,
+        .dtb = info->regs->cr3,
+        .addr = vad_start
+    );
+
+    constexpr int MAX_HEADER_BYTES = 1024;   // keep under 1 page
+    uint8_t image[MAX_HEADER_BYTES];
+
+    {
+        auto vmi = vmi_lock_guard(drakvuf);
+        return (VMI_SUCCESS == peparse_get_image(vmi, &ctx, MAX_HEADER_BYTES, image));
+    }
+}
+
+/**
  * Check if DLL is interesting, if so, build a "hooking context" of a DLL. Such context is needed,
  * because user mode hooking is a stateful operation which requires a VM to be un-paused many times.
  */
@@ -208,6 +231,9 @@ static dll_t* create_dll_meta(drakvuf_t drakvuf, drakvuf_trap_info* info, userho
         }
     }
 
+    if (!check_pe_image(drakvuf, info, &mmvad))
+        return nullptr;
+
     uint32_t thread_id;
     if (!drakvuf_get_current_thread_id(drakvuf, info, &thread_id))
         return nullptr;
@@ -237,32 +263,14 @@ static dll_t* create_dll_meta(drakvuf_t drakvuf, drakvuf_trap_info* info, userho
     }
 
     PRINT_DEBUG("[USERHOOK] Found DLL which is worth processing %llx\n", (unsigned long long)mmvad.starting_vpn << 12);
-    addr_t vad_start = mmvad.starting_vpn << 12;
-    size_t vad_length = (mmvad.ending_vpn - mmvad.starting_vpn + 1) << 12;
-
-    ACCESS_CONTEXT(ctx,
-        .translate_mechanism = VMI_TM_PROCESS_DTB,
-        .dtb = info->regs->cr3,
-        .addr = vad_start
-    );
-
-    addr_t export_header_rva = 0;
-    size_t export_header_size = 0;
-
-    constexpr int MAX_HEADER_BYTES = 1024;   // keep under 1 page
-    uint8_t image[MAX_HEADER_BYTES];
-
-    vmi_instance_t vmi = drakvuf_lock_and_get_vmi(drakvuf);
-    bool status = (VMI_SUCCESS == peparse_get_image(vmi, &ctx, MAX_HEADER_BYTES, image));
-    drakvuf_release_vmi(drakvuf);
-
-    if (!status)
-        return nullptr;
 
     void* optional_header = NULL;
     uint16_t magic = 0;
 
     peparse_assign_headers(image, NULL, NULL, &magic, &optional_header, NULL, NULL);
+    addr_t export_header_rva = 0;
+    size_t export_header_size = 0;
+
     export_header_rva = peparse_get_idd_rva(IMAGE_DIRECTORY_ENTRY_EXPORT, &magic, optional_header, NULL, NULL);
     export_header_size = peparse_get_idd_size(IMAGE_DIRECTORY_ENTRY_EXPORT, &magic, optional_header, NULL, NULL);
 
