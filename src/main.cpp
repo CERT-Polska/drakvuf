@@ -115,7 +115,11 @@
 #include <memory>
 
 #include <map>
+#if __has_include(<filesystem>)
 #include <filesystem>
+#else
+#include <experimental/filesystem>
+#endif
 
 #include "drakvuf.h"
 #include "exitcodes.h"
