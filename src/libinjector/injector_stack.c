@@ -458,7 +458,7 @@ bool setup_linux_stack(vmi_instance_t vmi, x86_registers_t* regs, struct argumen
         // 1: rdi
         // 2: rsi
         // 3: rdx
-        // 4: rcx
+        // 4: r10
         // 5: r8
         // 6: r9
 
@@ -481,7 +481,7 @@ bool setup_linux_stack(vmi_instance_t vmi, x86_registers_t* regs, struct argumen
                 regs->r8 = args[4].data_on_stack;
             // fall through
             case 4:
-                regs->rcx = args[3].data_on_stack;
+                regs->r10 = args[3].data_on_stack;
             // fall through
             case 3:
                 regs->rdx = args[2].data_on_stack;
