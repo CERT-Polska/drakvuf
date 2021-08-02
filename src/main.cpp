@@ -433,6 +433,7 @@ int main(int argc, char** argv)
         opt_objmon_disable_duplicate_hook,
         opt_hidsim_template,
         opt_pymon_dir,
+        opt_pymon_repl,
     };
     const option long_opts[] =
     {
@@ -492,6 +493,7 @@ int main(int argc, char** argv)
         {"objmon-disable-duplicate-hook", no_argument, NULL, opt_objmon_disable_duplicate_hook},
         {"hid-template", required_argument, NULL, opt_hidsim_template},
         {"pymon-dir", required_argument, NULL, opt_pymon_dir},
+        {"pymon-repl", no_argument, NULL, opt_pymon_repl},
         {NULL, 0, NULL, 0}
     };
     const char* opts = "r:d:i:I:e:m:t:D:o:vx:a:f:spT:S:Mc:nblgj:k:w:W:hF:C";
@@ -797,6 +799,9 @@ int main(int argc, char** argv)
             case opt_pymon_dir:
                 options.pymon_dir = optarg;
                 break;
+            case opt_pymon_repl:
+                options.pymon_repl = true;
+                break
 #endif
             case 'h':
                 print_usage();

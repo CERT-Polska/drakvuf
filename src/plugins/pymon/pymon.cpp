@@ -108,9 +108,17 @@
 #include "pymon.h"
 #include "libpy.h"
 
+event_response_t pymon::init_repl(drakvufinfo_t drakvuf, drakvuf_trap_info_t* info)
+{
+    python_init(drakvuf, this->scripts_dir);
+    python_inject_variables(drakvuf, info);
+
+    return VMI_EVENT_RESPONSE_NONE;
+}
+
 event_response_t pymon::init_scripts(drakvuf_t drakvuf, drakvuf_trap_info_t* info)
 {
-    python_init(drakvuf, info);
+    python_init(drakvuf, this->scripts_dir);
     python_inject_variables(drakvuf, info);
 
     auto mainModule = PyImport_AddModule("__main__");
@@ -147,15 +155,17 @@ event_response_t pymon::init_scripts(drakvuf_t drakvuf, drakvuf_trap_info_t* inf
 }
 
 pymon::pymon(drakvuf_t drakvuf_, const pymon_config& config_, output_format_t output_)
-    : pluginex(drakvuf_, output_)
+    : pluginex(drakvuf_, output_),
+      scripts_dir(config_.pymon_dir)
 {
-    if (config_.pymon_dir)
+    if (!this->scripts_dir)
     {
-        this->scripts_dir = config_.pymon_dir;
-        this->inject_hook = createCr3Hook(&pymon::init_scripts);
+        PRINT_DEBUG("[PYMON] --pymon-dir must be provided for pymon to start\n");
+        throw -1;
     }
+
+    if (config_.pymon_repl)
+        this->inject_hook = createCr3Hook(&pymon::init_repl);
     else
-    {
-        this->inject_hook = createCr3Hook(&repl_start);
-    }
+        this->inject_hook = createCr3Hook(&pymon::init_scripts);
 }

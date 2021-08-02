@@ -454,6 +454,7 @@ int drakvuf_plugins::start(const drakvuf_plugin_t plugin_id,
                     pymon_config config =
                     {
                         .pymon_dir = options->pymon_dir,
+                        .pymon_repl = options->pymon_repl,
                     };
                     this->plugins[plugin_id] = std::make_unique<pymon>(this->drakvuf, config, this->output);
                     break;

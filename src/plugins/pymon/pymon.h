@@ -110,6 +110,7 @@
 struct pymon_config
 {
     const char* pymon_dir;
+    const bool pymon_repl = false;
 };
 
 class pymon : public pluginex
@@ -118,6 +119,7 @@ public:
     pymon(drakvuf_t drakvuf, const pymon_config& config, output_format_t output);
 
     event_response_t init_scripts(drakvuf_t drakvuf, drakvuf_trap_info_t* info);
+    event_response_t init_repl(drakvuf_t drakvuf, drakvuf_trap_info_t* info);
 
     std::string scripts_dir;
     std::unique_ptr<libhook::Cr3Hook> inject_hook;

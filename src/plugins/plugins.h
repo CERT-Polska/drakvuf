@@ -165,6 +165,7 @@ struct plugins_options
     bool objmon_disable_duplicate_hook; // PLUGIN_OBJMON
     const char* hidsim_template;        // PLUGIN_HIDSIM
     const char* pymon_dir;              // PLUGIN_PYMON
+    bool pymon_repl = false;            // PLUGIN_PYMON
 };
 
 typedef enum drakvuf_plugin
