@@ -124,7 +124,7 @@ event_response_t pymon::init_scripts(drakvuf_t drakvuf, drakvuf_trap_info_t* inf
     auto mainModule = PyImport_AddModule("__main__");
     auto globals = PyModule_GetDict(mainModule);
 
-    PRINT_DEBUG("[PYMON] scanning directory %s\n", this->scripts_dir.c_str());
+    PRINT_DEBUG("[PYMON] scanning directory %s\n", this->scripts_dir);
     for (const auto& entry : std::filesystem::directory_iterator(this->scripts_dir))
     {
         if (entry.path().extension() != ".py")
