@@ -694,7 +694,7 @@ if test x$plugin_pymon = xyes; then
 
   AC_PATH_PROG([CTYPESGEN], [ctypesgen], [])
   AS_IF([test x"$CTYPESGEN" = x],
-    AC_MSG_ERROR([could not find ctypesgen])
+    AC_MSG_ERROR([could not find ctypesgen, please install via 'pip3 install ctypesgen'])
   )
 fi
 
