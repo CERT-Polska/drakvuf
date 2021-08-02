@@ -139,7 +139,7 @@ event_response_t pymon::init_scripts(drakvuf_t drakvuf, drakvuf_trap_info_t* inf
         fclose(f);
     }
 
-    PRING_DEBUG("[PYMON] Unhooking CR3\n");
+    PRINT_DEBUG("[PYMON] Unhooking CR3\n");
     this->inject_hook.reset();
 
     PRINT_DEBUG("[PYMON] Finished loading all scripts\n");
