@@ -157,8 +157,10 @@ event_response_t repl_start(drakvuf_t drakvuf, drakvuf_trap_info_t* info)
     // expects python_init to be called before
     python_inject_variables(drakvuf, info);
 
-    FILE* file = fopen("$PTS", "rw");
-	PyRun_InteractiveLoop(file, "$PTS");
+    PyCompilerFlags cf = _PyCompilerFlags_INIT;
+    const auto ret = PyRun_AnyFileExFlags(stdin, "<stdin>", 0, &cf);
+    if (ret != 0)
+        PRINT_DEBUG("return code non 0: %i", ret);
 
     return VMI_EVENT_RESPONSE_NONE;
 }
