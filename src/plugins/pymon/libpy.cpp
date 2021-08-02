@@ -127,7 +127,7 @@ void python_init(drakvuf_t drakvuf, const std::string& scripts_dir)
     }
 
     // import modules
-    if (PyRun_SimpleString("from ctypes import *") == -1)
+    if (PyRun_SimpleString("from ctypes import *;import libdrakvuf") == -1)
     {
         std::cout << "Failed to load one of dependencies\n";
         PyErr_Print();
