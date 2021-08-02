@@ -328,8 +328,11 @@ static void print_usage()
 #endif
 #ifdef ENABLE_PLUGIN_PYMON
             "\t --pymon-dir <directory>\n"
-            "\t                           (optional) if present, will load all scripts from dir\n"
+            "\t                           if present, will load all scripts from dir\n"
             "\t                           if not present will start REPL\n"
+            "\t --pymon-repl\n"
+            "\t                           (optional) if present, will start repl\n"
+            "\t                           if not present, will runn scripts from pymon_dir\n"
 #endif
         "\t -h, --help                Show this help\n"
     );
