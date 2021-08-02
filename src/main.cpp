@@ -801,7 +801,7 @@ int main(int argc, char** argv)
                 break;
             case opt_pymon_repl:
                 options.pymon_repl = true;
-                break
+                break;
 #endif
             case 'h':
                 print_usage();
