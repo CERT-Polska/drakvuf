@@ -125,6 +125,13 @@ event_response_t repl_start(drakvuf_t drakvuf, drakvuf_trap_info_t* info);
  */
 void python_init(drakvuf_t drakvuf, drakvuf_trap_info_t* info);
 
+/**
+*  @brief inject helper variables into python instance from current trap info
+ * @param drakvuf - drakvuf instance
+ * @param info - trap info
+*/
+void python_inject_variables(drakvuf_t drakvuf, drakvuf_trap_info_t* info);
+
 #ifdef __cplusplus
 }
 #endif

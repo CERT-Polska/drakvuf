@@ -107,6 +107,7 @@
 #include <limits.h>
 #include <string>
 #include <sstream>
+#include <iostream>
 #include <Python.h>
 
 static event_response_t get_ret_val()
@@ -118,7 +119,7 @@ static event_response_t get_ret_val()
     return static_cast<event_response_t>(retval);
 }
 
-static void python_init(drakvuf_t drakvuf, const std::string& pymon_dir)
+void python_init(drakvuf_t drakvuf, const std::string& pymon_dir)
 {
     // init python
     Py_Initialize();
