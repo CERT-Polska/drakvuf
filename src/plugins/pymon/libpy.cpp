@@ -109,6 +109,7 @@
 #include <sstream>
 #include <iostream>
 #include <Python.h>
+#include "plugins/private.h"
 
 static event_response_t get_ret_val()
 {
