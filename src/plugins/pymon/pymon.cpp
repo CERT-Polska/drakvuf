@@ -111,11 +111,7 @@
 event_response_t pymon::init_repl(drakvuf_t drakvuf, drakvuf_trap_info_t* info)
 {
     python_init(drakvuf, this->scripts_dir);
-    python_inject_variables(drakvuf, info);
-
-    FILE* file = fopen("$PTS", "rw");
-	PyRun_InteractiveLoop(file, "$PTS");
-
+    repl_start(drakvuf, info);
     return VMI_EVENT_RESPONSE_NONE;
 }
 

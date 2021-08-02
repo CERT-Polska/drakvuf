@@ -141,10 +141,7 @@ void python_inject_variables(drakvuf_t drakvuf, drakvuf_trap_info_t* info)
 {
     std::stringstream ss;
 
-    // convenient variable assignment
     ss << "trap_info = cast(" << static_cast<void*>(info) << ", POINTER(libdrakvuf.drakvuf_trap_info_t))\n";
-
-    // pass repl_start to python
     ss << "trap_cb = CFUNCTYPE(libdrakvuf.event_response_t, libdrakvuf.drakvuf_t, POINTER(libdrakvuf.drakvuf_trap_info_t))\n";
     ss << "repl_start = cast(" << reinterpret_cast<void*>(repl_start) << ", trap_cb)\n";
     ss << "drakvuf = cast(" << reinterpret_cast<void*>(drakvuf) << ", libdrakvuf.drakvuf_t)\n";
@@ -153,4 +150,15 @@ void python_inject_variables(drakvuf_t drakvuf, drakvuf_trap_info_t* info)
     PRINT_DEBUG("setting up variables:\n%s", ss.str().c_str());
 
     PyRun_SimpleString(ss.str().c_str());
+}
+
+event_response_t repl_start(drakvuf_t drakvuf, drakvuf_trap_info_t* info)
+{
+    // expects python_init to be called before
+    python_inject_variables(drakvuf, info);
+
+    FILE* file = fopen("$PTS", "rw");
+	PyRun_InteractiveLoop(file, "$PTS");
+
+    return VMI_EVENT_RESPONSE_NONE;
 }
