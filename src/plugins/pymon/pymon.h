@@ -121,6 +121,6 @@ public:
     event_response_t init_scripts(drakvuf_t drakvuf, drakvuf_trap_info_t* info);
     event_response_t init_repl(drakvuf_t drakvuf, drakvuf_trap_info_t* info);
 
-    std::string scripts_dir;
+    const char* scripts_dir;
     std::unique_ptr<libhook::Cr3Hook> inject_hook;
 };
