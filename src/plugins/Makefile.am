@@ -314,8 +314,6 @@ sources += pymon/pymon.h
 sources += pymon/pymon.cpp
 sources += pymon/libpy.h
 sources += pymon/libpy.cpp
-sources += pymon/userhooks.h
-sources += pymon/userhooks.cpp
 endif
 
 ###############################################################################
