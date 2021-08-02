@@ -111,15 +111,6 @@
 #include <Python.h>
 #include "plugins/private.h"
 
-static event_response_t get_ret_val()
-{
-    // Using PyEval_GetGlobals would probably be nicer, but it returned nullptr
-    auto module = PyImport_AddModule("__main__");
-    auto retval = PyLong_AsSize_t(PyObject_GetAttrString(module, "retval"));
-    PRINT_DEBUG("retval: %lu\n", retval);
-    return static_cast<event_response_t>(retval);
-}
-
 void python_init(drakvuf_t drakvuf, const std::string& scripts_dir)
 {
     // init python
@@ -132,7 +123,7 @@ void python_init(drakvuf_t drakvuf, const std::string& scripts_dir)
     if (module == NULL)
     {
         std::cout << "No libdrakvuf.py found, please move it to pymon_dir before running pymon\n";
-        exit(1);
+        throw -1;
     }
 
     // import modules
@@ -140,7 +131,7 @@ void python_init(drakvuf_t drakvuf, const std::string& scripts_dir)
     {
         std::cout << "Failed to load one of dependencies\n";
         PyErr_Print();
-        exit(1);
+        throw -1;
     }
 
     PyObject_SetAttrString(module, "drakvuf", PyLong_FromVoidPtr(static_cast<void*>(drakvuf)));
@@ -162,26 +153,4 @@ void python_inject_variables(drakvuf_t drakvuf, drakvuf_trap_info_t* info)
     PRINT_DEBUG("setting up variables:\n%s", ss.str().c_str());
 
     PyRun_SimpleString(ss.str().c_str());
-}
-
-event_response_t repl_start(drakvuf_t drakvuf, drakvuf_trap_info_t* info)
-{
-    python_init(drakvuf);
-
-    std::cout << "=================================================================\n"
-        << "REPL STARTING...\n"
-        << "=================================================================\n";
-
-    python_inject_variables(drakvuf, info);
-
-    PyRun_SimpleString(
-        "IPython.embed(colors='neutral', banner2=\"\"\""
-        "REPL ready to go, enjoy hacking!\n"
-        "trap_info contains current trap info structure\n"
-        "drakvuf contains drakvuf_t pointer\n"
-        "retval contains event return code, which you can overwrite\n"
-        "to go back to drakvuf loop use exit(), to break loop use CTRL+C\"\"\")\n"
-    );
-
-    return get_ret_val();
 }

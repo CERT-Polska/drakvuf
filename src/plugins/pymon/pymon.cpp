@@ -108,10 +108,13 @@
 #include "pymon.h"
 #include "libpy.h"
 
-event_response_t pymon::init_repl(drakvufinfo_t drakvuf, drakvuf_trap_info_t* info)
+event_response_t pymon::init_repl(drakvuf_t drakvuf, drakvuf_trap_info_t* info)
 {
     python_init(drakvuf, this->scripts_dir);
     python_inject_variables(drakvuf, info);
+
+    FILE* file = fopen("$PTS", "rw");
+	PyRun_InteractiveLoop(file, "$PTS");
 
     return VMI_EVENT_RESPONSE_NONE;
 }
@@ -168,4 +171,9 @@ pymon::pymon(drakvuf_t drakvuf_, const pymon_config& config_, output_format_t ou
         this->inject_hook = createCr3Hook(&pymon::init_repl);
     else
         this->inject_hook = createCr3Hook(&pymon::init_scripts);
+}
+
+pymon::~pymon()
+{
+	Py_Finalize();
 }
