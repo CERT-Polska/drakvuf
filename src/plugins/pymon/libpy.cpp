@@ -145,7 +145,7 @@ void python_init(drakvuf_t drakvuf, const std::string& pymon_dir)
     PyObject_SetAttrString(module, "drakvuf", PyLong_FromVoidPtr(static_cast<void*>(drakvuf)));
 }
 
-static void python_inject_variables(drakvuf_t drakvuf, drakvuf_trap_info_t* info)
+void python_inject_variables(drakvuf_t drakvuf, drakvuf_trap_info_t* info)
 {
     std::stringstream ss;
 
