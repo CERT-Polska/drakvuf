@@ -171,19 +171,3 @@ bin_PROGRAMS += xtf
 xtf_SOURCES = xtf.c
 xtf_LDADD = libdrakvuf/libdrakvuf.la
 endif
-
-if REPL
-bin_PROGRAMS += repl
-
-SUBDIRS += librepl
-
-repl_SOURCES = repl.cpp
-
-drakvuf_LDADD += librepl/librepl.la
-
-repl_LDADD = librepl/librepl.la
-repl_LDADD += libdrakvuf/libdrakvuf.la
-
-repl_CXXFLAGS = $(AM_CXXFLAGS) -fpie
-repl_LDFLAGS = $(AM_LDFLAGS) -Wl,-E
-endif

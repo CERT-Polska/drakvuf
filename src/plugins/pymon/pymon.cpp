@@ -102,20 +102,60 @@
  *                                                                         *
  ***************************************************************************/
 
-#pragma once
+#include "plugins/output_format.h"
+#include <filesystem>
+#include <Python.h>
+#include "pymon.h"
+#include "libpy.h"
 
-#include <libdrakvuf/libdrakvuf.h>
+event_response_t pymon::init_scripts(drakvuf_t drakvuf, drakvuf_trap_info_t* info)
+{
+    python_init(drakvuf, info);
+    python_inject_variables(drakvuf, info);
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+    auto mainModule = PyImport_AddModule("__main__");
+    auto globals = PyModule_GetDict(mainModule);
 
-/**
- * @param drakvuf - drakvuf instance
- * @param info - trap info
- */
-event_response_t repl_start(drakvuf_t drakvuf, drakvuf_trap_info_t* info);
+    PRINT_DEBUG("[PYMON] scanning directory %s\n", this->scripts_dir.c_str());
+    for (const auto& entry : std::filesystem::directory_iterator(this->scripts_dir))
+    {
+        if (entry.path().extension() != ".py")
+        {
+            PRINT_DEBUG("[PYMON] file %s skipped, not a .py file\n", entry.path().c_str());
+            continue;
+        }
 
-#ifdef __cplusplus
+        auto filename = entry.path().filename();
+        if (filename == "libdrakvuf.py")
+        {
+            PRINT_DEBUG("[PYMON] skipping libdrakvuf.py\n");
+            continue;
+        }
+
+        PRINT_DEBUG("[PYMON] loading plugin %s\n", filename.c_str());
+
+        auto f = fopen(entry.path().c_str(), "r");
+        PyRun_SimpleFile(f, filename.c_str());
+        fclose(f);
+    }
+
+    PRING_DEBUG("[PYMON] Unhooking CR3\n");
+    this->inject_hook.reset();
+
+    PRINT_DEBUG("[PYMON] Finished loading all scripts\n");
+    return VMI_EVENT_RESPONSE_NONE;
 }
-#endif
+
+pymon::pymon(drakvuf_t drakvuf_, const pymon_config& config_, output_format_t output_)
+    : pluginex(drakvuf_, output_)
+{
+    if (config_.pymon_dir)
+    {
+        this->scripts_dir = config_.pymon_dir;
+        this->inject_hook = createCr3Hook(&pymon::init_scripts);
+    }
+    else
+    {
+        this->inject_hook = createCr3Hook(&repl_start);
+    }
+}

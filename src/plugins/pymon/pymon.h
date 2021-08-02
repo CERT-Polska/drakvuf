@@ -102,128 +102,23 @@
  *                                                                         *
  ***************************************************************************/
 
-#include <unistd.h>
-#include <limits.h>
+#pragma once
 
-#include <iostream>
-#include <sstream>
-#include <string>
+#include "plugins/private.h"
+#include "plugins/plugins_ex.h"
 
-#include <librepl/librepl.h>
-#include <Python.h>
-
-#ifndef PRINT_DEBUG
-#ifdef DRAKVUF_DEBUG
-// defined in libdrakvuf
-extern bool verbose;
-
-#define PRINT_DEBUG(args...) \
-    do { \
-        if(verbose) fprintf (stderr, args); \
-    } while (0)
-
-#else
-#define PRINT_DEBUG(args...) \
-    do {} while(0)
-
-#endif // DRAKVUF_DEBUG
-#endif // PRINT_DEBUG
-
-#define Py_REF_DEBUG \
-    PyObject* refCount = PyObject_CallObject(PySys_GetObject("gettotalrefcount"), NULL); \
-    PRINT_DEBUG("total refcount = %i\n", PyInt_AsSsize_t(refCount)); \
-    Py_DECREF(refCount);
-
-static std::string get_selfpath()
+struct pymon_config
 {
-    char buf[PATH_MAX];
-    ssize_t len = ::readlink("/proc/self/exe", buf, sizeof(buf) - 1);
-    if (len != -1)
-    {
-        buf[len] = '\0';
-        return std::string(buf);
-    }
-    else
-    {
-        PRINT_DEBUG("failed to get executable path!");
-        exit(1);
-    }
-}
+    const char* pymon_dir;
+};
 
-static event_response_t get_ret_val()
+class pymon : public pluginex
 {
-    // Using PyEval_GetGlobals would probably be nicer, but it returned nullptr
-    auto module = PyImport_AddModule("__main__");
-    auto retval = PyLong_AsSize_t(PyObject_GetAttrString(module, "retval"));
-    PRINT_DEBUG("retval: %lu\n", retval);
-    return static_cast<event_response_t>(retval);
-}
+public:
+    pymon(drakvuf_t drakvuf, const pymon_config& config, output_format_t output);
 
-static void repl_init(drakvuf_t drakvuf)
-{
-    // init python
-    Py_Initialize();
+    event_response_t init_scripts(drakvuf_t drakvuf, drakvuf_trap_info_t* info);
 
-    // get executable path
-    auto exe_path = get_selfpath();
-    auto py_drakvuf_path = exe_path.substr(0, exe_path.find_last_of('/')) + "/librepl";
-    PRINT_DEBUG("PyDrakvuf path: %s\n", py_drakvuf_path.c_str());
-
-    // load libdrakvuf
-    auto sysPath = PySys_GetObject("path");
-    PyList_Append(sysPath, PyUnicode_FromString(py_drakvuf_path.c_str()));
-    auto module = PyImport_ImportModule("libdrakvuf");
-
-    if (module == NULL)
-    {
-        std::cout << "No libdrakvuf.py found, please generate it before running REPL\n";
-        exit(1);
-    }
-
-    // import modules
-    if (PyRun_SimpleString("from ctypes import *\nimport IPython\nimport libdrakvuf\n") == -1)
-    {
-        std::cout << "Failed to load one of dependencies\n";
-        PyErr_Print();
-        exit(1);
-    }
-
-    PyObject_SetAttrString(module, "drakvuf", PyLong_FromVoidPtr(static_cast<void*>(drakvuf)));
-}
-
-event_response_t repl_start(drakvuf_t drakvuf, drakvuf_trap_info_t* info)
-{
-    repl_init(drakvuf);
-
-    std::cout << "=================================================================\n"
-        << "REPL STARTING...\n"
-        << "=================================================================\n";
-
-    {
-        std::stringstream ss;
-
-        // convenient variable assignment
-        ss << "trap_info = cast(" << static_cast<void*>(info) << ", POINTER(libdrakvuf.drakvuf_trap_info_t))\n";
-
-        // pass repl_start to python
-        ss << "trap_cb = CFUNCTYPE(libdrakvuf.event_response_t, libdrakvuf.drakvuf_t, POINTER(libdrakvuf.drakvuf_trap_info_t))\n";
-        ss << "repl_start = cast(" << reinterpret_cast<void*>(repl_start) << ", trap_cb)\n";
-        ss << "drakvuf = cast(" << reinterpret_cast<void*>(drakvuf) << ", libdrakvuf.drakvuf_t)\n";
-        ss << "retval = " << reinterpret_cast<int>(VMI_EVENT_RESPONSE_NONE) << "\n";
-
-        PRINT_DEBUG("setting up variables:\n%s", ss.str().c_str());
-
-        PyRun_SimpleString(ss.str().c_str());
-    }
-
-    PyRun_SimpleString(
-        "IPython.embed(colors='neutral', banner2=\"\"\""
-        "REPL ready to go, enjoy hacking!\n"
-        "trap_info contains current trap info structure\n"
-        "drakvuf contains drakvuf_t pointer\n"
-        "retval contains event return code, which you can overwrite\n"
-        "to go back to drakvuf loop use exit(), to break loop use CTRL+C\"\"\")\n"
-    );
-
-    return get_ret_val();
-}
+    std::string scripts_dir;
+    std::unique_ptr<libhook::Cr3Hook> inject_hook;
+};

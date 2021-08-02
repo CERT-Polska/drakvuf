@@ -326,6 +326,11 @@ static void print_usage()
         "\t --hid-template <path to template>\n"
         "\t                           The template specifying the HID events to simulate\n"
 #endif
+#ifdef ENABLE_PLUGIN_PYMON
+            "\t --pymon-dir <directory>\n"
+            "\t                           (optional) if present, will load all scripts from dir\n"
+            "\t                           if not present will start REPL\n"
+#endif
         "\t -h, --help                Show this help\n"
     );
 }
@@ -427,6 +432,7 @@ int main(int argc, char** argv)
         opt_objmon_disable_create_hook,
         opt_objmon_disable_duplicate_hook,
         opt_hidsim_template,
+        opt_pymon_dir,
     };
     const option long_opts[] =
     {
@@ -485,6 +491,7 @@ int main(int argc, char** argv)
         {"objmon-disable-create-hook", no_argument, NULL, opt_objmon_disable_create_hook},
         {"objmon-disable-duplicate-hook", no_argument, NULL, opt_objmon_disable_duplicate_hook},
         {"hid-template", required_argument, NULL, opt_hidsim_template},
+        {"pymon-dir", required_argument, NULL, opt_pymon_dir},
         {NULL, 0, NULL, 0}
     };
     const char* opts = "r:d:i:I:e:m:t:D:o:vx:a:f:spT:S:Mc:nblgj:k:w:W:hF:C";
@@ -786,7 +793,11 @@ int main(int argc, char** argv)
                 options.hidsim_template = optarg;
                 break;
 #endif
-
+#ifdef ENABLE_PLUGIN_PYMON
+            case opt_pymon_dir:
+                options.pymon_dir = optarg;
+                break;
+#endif
             case 'h':
                 print_usage();
                 return drakvuf_exit_code_t::SUCCESS;
