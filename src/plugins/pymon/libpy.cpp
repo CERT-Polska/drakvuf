@@ -120,14 +120,14 @@ static event_response_t get_ret_val()
     return static_cast<event_response_t>(retval);
 }
 
-void python_init(drakvuf_t drakvuf, const std::string& pymon_dir)
+void python_init(drakvuf_t drakvuf, const std::string& scripts_dir)
 {
     // init python
     Py_Initialize();
 
     // load libdrakvuf
     auto sysPath = PySys_GetObject("path");
-    PyList_Append(sysPath, PyUnicode_FromString(pymon_dir.c_str()));
+    PyList_Append(sysPath, PyUnicode_FromString(scripts_dir.c_str()));
     auto module = PyImport_ImportModule("libdrakvuf");
     if (module == NULL)
     {

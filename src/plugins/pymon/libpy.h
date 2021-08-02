@@ -105,6 +105,7 @@
 #pragma once
 
 #include <libdrakvuf/libdrakvuf.h>
+#include <string>
 
 #ifdef __cplusplus
 extern "C" {
@@ -123,7 +124,7 @@ event_response_t repl_start(drakvuf_t drakvuf, drakvuf_trap_info_t* info);
  * @param info - trap info
  * @param scripts_dir - directory to load python scripts from
  */
-void python_init(drakvuf_t drakvuf, drakvuf_trap_info_t* info);
+void python_init(drakvuf_t drakvuf, const std::string& scripts_dir);
 
 /**
 *  @brief inject helper variables into python instance from current trap info
