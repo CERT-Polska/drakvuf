@@ -148,8 +148,8 @@ static event_response_t cleanup(drakvuf_t drakvuf, drakvuf_trap_info_t* info, bo
     if (clear_trap)
         free_bp_trap(drakvuf, injector, info->trap);
 
-    // give the last step
-    injector->step = STEP5;
+    // give the second last step as it will be incremented
+    injector->step = STEP5 - 1;
 
     return VMI_EVENT_RESPONSE_SET_REGISTERS;
 }
