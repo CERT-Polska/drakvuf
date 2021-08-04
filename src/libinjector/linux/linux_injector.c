@@ -70,6 +70,8 @@ static event_response_t injector_int3_userspace_cb(drakvuf_t drakvuf, drakvuf_tr
         }
     }
 
+    injector->step+=1;
+
     return event;
 }
 
@@ -169,7 +171,7 @@ bool init_injector(injector_t injector)
         }
         default:
         {
-            fprintf(stderr, "Method not supported for [LINUX]");
+            fprintf(stderr, "Method not supported for [LINUX]\n");
             return false;
         }
     }
