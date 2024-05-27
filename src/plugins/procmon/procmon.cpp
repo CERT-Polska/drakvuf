@@ -164,6 +164,17 @@ struct process_create_ex_result_t: public call_result_t
     uint32_t job_member_level;
 };
 
+struct protect_virtual_memory_result_t: public call_result_t
+{
+    protect_virtual_memory_result_t(): call_result_t(), process_handle_addr(), base_address_addr(), number_of_bytes_addr(), new_access_protection(), old_access_protection_addr() {}
+
+    addr_t process_handle_addr;
+    addr_t base_address_addr;
+    addr_t number_of_bytes_addr;
+    uint32_t new_access_protection;
+    addr_t old_access_protection_addr;
+};
+
 struct process_visitor_ctx
 {
     output_format_t format;
@@ -630,19 +641,77 @@ static event_response_t open_thread_hook_cb(drakvuf_t drakvuf, drakvuf_trap_info
     return VMI_EVENT_RESPONSE_NONE;
 }
 
-static event_response_t protect_virtual_memory_hook_cb(drakvuf_t drakvuf, drakvuf_trap_info_t* info)
+static event_response_t protect_virtual_memory_return_hook_cb(drakvuf_t drakvuf, drakvuf_trap_info_t* info)
 {
-    // HANDLE ProcessHandle
-    uint64_t process_handle = drakvuf_get_function_argument(drakvuf, info, 1);
-    // WIN32_PROTECTION_MASK NewProtectWin32
-    uint32_t new_protect = drakvuf_get_function_argument(drakvuf, info, 4);
-
     auto plugin = get_trap_plugin<procmon>(info);
+    auto params = get_trap_params<protect_virtual_memory_result_t>(info);
+
+    if (!params->verify_result_call_params(drakvuf, info))
+        return VMI_EVENT_RESPONSE_NONE;
+
+    vmi_instance_t vmi = drakvuf_lock_and_get_vmi(drakvuf);
+    ACCESS_CONTEXT(ctx,
+        .translate_mechanism = VMI_TM_PROCESS_DTB,
+        .dtb = info->regs->cr3
+    );
+
+    // PVOID BaseAddress
+    addr_t base_address = 0;
+    ctx.addr = params->base_address_addr;
+    if (VMI_SUCCESS != vmi_read_addr(vmi, &ctx, (addr_t*)&base_address))
+        PRINT_DEBUG("[PROCMON] Failed to read BaseAddress from NtProtectVirtualMemory\n");
+
+    // PULONG NumberOfBytesToProtect
+    uint32_t number_of_bytes = 0;
+    ctx.addr = params->number_of_bytes_addr;
+    if (VMI_SUCCESS != vmi_read_32(vmi, &ctx, (uint32_t*)&number_of_bytes))
+        PRINT_DEBUG("[PROCMON] Failed to read NumberOfBytesToProtect from NtProtectVirtualMemory\n");
+
+    // PULONG OldAccessProtection
+    uint32_t old_access_protection = 0;
+    ctx.addr = params->old_access_protection_addr;
+    if (VMI_SUCCESS != vmi_read_32(vmi, &ctx, (uint32_t*)&old_access_protection))
+        PRINT_DEBUG("[PROCMON] Failed to read OldAccessProtection from NtProtectVirtualMemory\n");
+
+    drakvuf_release_vmi(drakvuf);
 
     fmt::print(plugin->m_output_format, "procmon", drakvuf, info,
-        keyval("ProcessHandle", fmt::Xval(process_handle)),
-        keyval("NewProtectWin32", fmt::Qstr(stringify_protection_attributes(new_protect)))
+        keyval("ProcessHandle", fmt::Xval(params->process_handle_addr)),
+        keyval("BaseAddress", fmt::Xval(base_address)),
+        keyval("NumberOfBytesToProtect", fmt::Nval(number_of_bytes)),
+        keyval("NewProtectWin32", fmt::Qstr(stringify_protection_attributes(params->new_access_protection))),
+        keyval("OldProtectWin32", fmt::Qstr(stringify_protection_attributes(old_access_protection)))
     );
+    plugin->destroy_trap(info->trap);
+    return VMI_EVENT_RESPONSE_NONE;
+}
+
+static event_response_t protect_virtual_memory_hook_cb(drakvuf_t drakvuf, drakvuf_trap_info_t* info)
+{
+    auto plugin = get_trap_plugin<procmon>(info);
+    auto trap = plugin->register_trap<protect_virtual_memory_result_t>(
+            info,
+            protect_virtual_memory_return_hook_cb,
+            breakpoint_by_pid_searcher());
+
+    auto params = get_trap_params<protect_virtual_memory_result_t>(trap);
+
+    params->set_result_call_params(info);
+
+    // PHANDLE ProcessHandle
+    params->process_handle_addr = drakvuf_get_function_argument(drakvuf, info, 1);
+
+    // PVOID BaseAddress
+    params->base_address_addr = drakvuf_get_function_argument(drakvuf, info, 2);
+
+    // PULONG NumberOfBytesToProtect,
+    params->number_of_bytes_addr = drakvuf_get_function_argument(drakvuf, info, 3);
+
+    // ULONG NewAccessProtection
+    params->new_access_protection = drakvuf_get_function_argument(drakvuf, info, 4);
+
+    // PULONG OldAccessProtection
+    params->old_access_protection_addr = drakvuf_get_function_argument(drakvuf, info, 5);
 
     return VMI_EVENT_RESPONSE_NONE;
 }
