@@ -116,6 +116,54 @@
 
 #define DUMP_NAME_PLACEHOLDER "(not configured)"
 
+struct protect_virtual_memory_result_t: public call_result_t
+{
+    protect_virtual_memory_result_t(): call_result_t(), process_handle_addr(), base_address_addr(), number_of_bytes_addr(), new_access_protection(), old_access_protection_addr() {}
+
+    addr_t process_handle_addr;
+    addr_t base_address_addr;
+    addr_t number_of_bytes_addr;
+    uint32_t new_access_protection;
+    addr_t old_access_protection_addr;
+};
+
+struct page_fault_call_result : call_result_t
+{
+    page_fault_call_result() : call_result_t(), addr() {}
+    addr_t addr;
+};
+
+/// Hook physical page @addr for @access_type
+static bool hook_page_on_exec(
+    memdump* plugin,
+    vmi_instance_t vmi,
+    drakvuf_t drakvuf,
+    drakvuf_trap_info_t* info,
+    addr_t addr,
+    event_response_t (*callback)(drakvuf_t, drakvuf_trap_info_t*))
+{
+    auto trap = new (std::nothrow) drakvuf_trap_t();
+    if (!trap)
+        return false;
+
+    page_info_t page = {};
+    if(vmi_pagetable_lookup_extended(vmi, info->regs->cr3, addr, &page) != VMI_SUCCESS) {
+        return false;
+    }
+
+    trap->type = MEMACCESS;
+    trap->memaccess.gfn = page.paddr >> 12;
+    trap->memaccess.type = PRE;
+    trap->memaccess.access = VMI_MEMACCESS_X;
+    trap->cb = callback;
+    trap->name = "hook_page_on_exec";
+    plugin->register_trap<page_fault_call_result>(trap);
+    auto params = get_trap_params<page_fault_call_result>(trap);
+    params->addr = addr;
+    drakvuf_add_trap(drakvuf, trap);
+    return true;
+}
+
 static void save_file_metadata(const drakvuf_trap_info_t* info,
     const char* file_path,
     const char* data_file_name,
@@ -669,34 +717,63 @@ static event_response_t free_virtual_memory_hook_cb(drakvuf_t drakvuf, drakvuf_t
     return VMI_EVENT_RESPONSE_NONE;
 }
 
-static event_response_t protect_virtual_memory_hook_cb(drakvuf_t drakvuf, drakvuf_trap_info_t* info)
-{
-    // HANDLE ProcessHandle
-    uint64_t process_handle = drakvuf_get_function_argument(drakvuf, info, 1);
-    // OUT PVOID *BaseAddress
-    addr_t mem_base_address_ptr = drakvuf_get_function_argument(drakvuf, info, 2);
+static event_response_t dump_on_execute_cb(drakvuf_t drakvuf, drakvuf_trap_info_t* info) {
+    auto plugin = get_trap_plugin<memdump>(info);
+    auto params = get_trap_params<page_fault_call_result>(info->trap);
+    auto vaddr = params->addr;
+    plugin->destroy_trap(info->trap);
 
-    if (process_handle != ~0ULL)
+    mmvad_info_t mmvad;
+
+    vmi_instance_t vmi = drakvuf_lock_and_get_vmi(drakvuf);
+
+    if (!drakvuf_find_mmvad(drakvuf, info->attached_proc_data.base_addr, vaddr, &mmvad))
     {
-        PRINT_DEBUG("[MEMDUMP] Process handle not pointing to self, ignore\n");
+        PRINT_DEBUG("[MEMDUMP] Failed to find MMVAD for memory passed to NtProtectVirtualMemory\n");
+        drakvuf_release_vmi(drakvuf);
         return VMI_EVENT_RESPONSE_NONE;
     }
 
+    ACCESS_CONTEXT(ctx,
+        .translate_mechanism = VMI_TM_PROCESS_DTB,
+        .dtb = info->regs->cr3,
+        .addr = mmvad.starting_vpn * VMI_PS_4KB
+    );
+    size_t dump_size = (mmvad.ending_vpn - mmvad.starting_vpn + 1) * VMI_PS_4KB;
+    if (!dump_memory_region(drakvuf, vmi, info, plugin, &ctx, dump_size, "Possible shellcode execution on RWX detected", nullptr, false))
+    {
+        PRINT_DEBUG("[MEMDUMP] Failed to dump memory\n");
+        drakvuf_release_vmi(drakvuf);
+        return VMI_EVENT_RESPONSE_NONE;
+    }
+    drakvuf_release_vmi(drakvuf);
+    return VMI_EVENT_RESPONSE_NONE;
+}
+
+static event_response_t protect_virtual_memory_return_hook_cb(drakvuf_t drakvuf, drakvuf_trap_info_t* info)
+{
     auto plugin = get_trap_plugin<memdump>(info);
+    auto params = get_trap_params<protect_virtual_memory_result_t>(info);
+
+    if (!params->verify_result_call_params(drakvuf, info))
+        return VMI_EVENT_RESPONSE_NONE;
 
     vmi_instance_t vmi = drakvuf_lock_and_get_vmi(drakvuf);
+    addr_t mem_base_address_ptr = params->base_address_addr;
+
     ACCESS_CONTEXT(ctx,
         .translate_mechanism = VMI_TM_PROCESS_DTB,
         .dtb = info->regs->cr3,
         .addr = mem_base_address_ptr
     );
 
-    addr_t mem_base_address;
+    addr_t mem_base_address = 0;
 
     if (VMI_SUCCESS != vmi_read_addr(vmi, &ctx, &mem_base_address))
     {
         PRINT_DEBUG("[MEMDUMP] Failed to read base address in NtProtectVirtualMemory\n");
         drakvuf_release_vmi(drakvuf);
+        plugin->destroy_trap(info->trap);
         return VMI_EVENT_RESPONSE_NONE;
     }
 
@@ -706,6 +783,7 @@ static event_response_t protect_virtual_memory_hook_cb(drakvuf_t drakvuf, drakvu
     {
         PRINT_DEBUG("[MEMDUMP] Failed to find MMVAD for memory passed to NtProtectVirtualMemory\n");
         drakvuf_release_vmi(drakvuf);
+        plugin->destroy_trap(info->trap);
         return VMI_EVENT_RESPONSE_NONE;
     }
 
@@ -715,8 +793,9 @@ static event_response_t protect_virtual_memory_hook_cb(drakvuf_t drakvuf, drakvu
 
     if (VMI_SUCCESS != vmi_read_16(vmi, &ctx, &magic))
     {
-        PRINT_DEBUG("[MEMDUMP] Failed to access memory to be used with NtProtectVirtualMemory\n");
+        PRINT_DEBUG("[MEMDUMP] Failed to access memory to be used with NtProtectVirtualMemory (%lx)\n", mem_base_address);
         drakvuf_release_vmi(drakvuf);
+        plugin->destroy_trap(info->trap);
         return VMI_EVENT_RESPONSE_NONE;
     }
 
@@ -729,9 +808,68 @@ static event_response_t protect_virtual_memory_hook_cb(drakvuf_t drakvuf, drakvu
         {
             PRINT_DEBUG("[MEMDUMP] Failed to store memory dump due to an internal error\n");
         }
+    } else {
+        // PULONG OldAccessProtection
+        uint32_t PAGE_EXECUTE_READWRITE = 0x40;
+        uint32_t PAGE_EXECUTE = 0x10;
+        uint32_t old_access_protection = 0;
+        ctx.addr = params->old_access_protection_addr;
+        if (VMI_SUCCESS != vmi_read_32(vmi, &ctx, (uint32_t*)&old_access_protection))
+            PRINT_DEBUG("[MEMDUMP] Failed to read OldAccessProtection from NtProtectVirtualMemory\n");
+
+        // If it's not a binary, it can be a shellcode. Let's check if it's R?- => RWX transition
+        // The memory is usually filled with code after the call to the VirtualProtect,
+        // so let's set an execution trap.
+        else if(
+            (params->new_access_protection & PAGE_EXECUTE_READWRITE) == PAGE_EXECUTE_READWRITE
+            && old_access_protection < PAGE_EXECUTE
+        ) {
+            // Hook only the first page, hopefully OEP is at the start
+            if(!hook_page_on_exec(plugin, vmi, drakvuf, info, mem_base_address, dump_on_execute_cb)) {
+                PRINT_DEBUG("[MEMDUMP] Failed to hook page\n");
+            }
+        }
     }
 
     drakvuf_release_vmi(drakvuf);
+    plugin->destroy_trap(info->trap);
+    return VMI_EVENT_RESPONSE_NONE;
+}
+
+static event_response_t protect_virtual_memory_hook_cb(drakvuf_t drakvuf, drakvuf_trap_info_t* info)
+{
+    // HANDLE ProcessHandle
+    uint64_t process_handle = drakvuf_get_function_argument(drakvuf, info, 1);
+    // OUT PVOID *BaseAddress
+    addr_t mem_base_address_ptr = drakvuf_get_function_argument(drakvuf, info, 2);
+    if (process_handle != ~0ULL)
+    {
+        PRINT_DEBUG("[MEMDUMP] Process handle not pointing to self, ignore\n");
+        return VMI_EVENT_RESPONSE_NONE;
+    }
+
+    auto plugin = get_trap_plugin<memdump>(info);
+    auto trap = plugin->register_trap<protect_virtual_memory_result_t>(
+            info,
+            protect_virtual_memory_return_hook_cb,
+            breakpoint_by_pid_searcher());
+    auto params = get_trap_params<protect_virtual_memory_result_t>(trap);
+    params->set_result_call_params(info);
+
+   // PHANDLE ProcessHandle
+    params->process_handle_addr = process_handle;
+
+    // PVOID BaseAddress
+    params->base_address_addr = mem_base_address_ptr;
+
+    // PULONG NumberOfBytesToProtect,
+    params->number_of_bytes_addr = drakvuf_get_function_argument(drakvuf, info, 3);
+
+    // ULONG NewAccessProtection
+    params->new_access_protection = drakvuf_get_function_argument(drakvuf, info, 4);
+
+    // PULONG OldAccessProtection
+    params->old_access_protection_addr = drakvuf_get_function_argument(drakvuf, info, 5);
     return VMI_EVENT_RESPONSE_NONE;
 }
 
