@@ -236,6 +236,12 @@ static event_response_t wait_for_target_process_cb(drakvuf_t drakvuf, drakvuf_tr
     PRINT_DEBUG("CR3 changed to 0x%" PRIx64 ". PID: %u PPID: %u TID: %u\n",
         info->regs->cr3, info->proc_data.pid, info->proc_data.ppid, info->proc_data.tid);
 
+    if (injector->hijacked) {
+        PRINT_DEBUG("Target thread already hijacked, removing CR3 trap\n");
+        drakvuf_remove_trap(drakvuf, info->trap, NULL);
+        return 0;
+    }
+
     if (info->proc_data.pid != injector->target_pid)
         return 0;
 
