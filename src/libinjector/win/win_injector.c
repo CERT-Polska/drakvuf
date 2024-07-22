@@ -283,7 +283,6 @@ static event_response_t wait_for_target_process_cb(drakvuf_t drakvuf, drakvuf_tr
         status = vmi_read_addr_va(vmi,
                 trapframe + injector->offsets[KTRAP_FRAME_RIP],
                 0, &bp_addr);
-
         if (status == VMI_FAILURE || !bp_addr)
         {
             PRINT_DEBUG("Failed to read RIP from trapframe or RIP is NULL!\n");
@@ -295,14 +294,16 @@ static event_response_t wait_for_target_process_cb(drakvuf_t drakvuf, drakvuf_tr
             PRINT_DEBUG("Got return address from kernel address space, waiting for another one.\n");
             goto done;
         }
-
+        if (injector->is_initial_user_trap_set) {
+            // If int3 trap was already set, remove before setting new one
+            drakvuf_remove_trap(drakvuf, &injector->bp, NULL);
+            injector->is_initial_user_trap_set = false;
+        }
         if (setup_int3_trap(injector, info, bp_addr))
         {
             PRINT_DEBUG("Got return address 0x%lx from trapframe and it's now trapped!\n",
                 bp_addr);
-
-            // Unsubscribe from the CR3 trap
-            drakvuf_remove_trap(drakvuf, info->trap, NULL);
+            injector->is_initial_user_trap_set = true;
         }
         else
             fprintf(stderr, "Failed to trap trapframe return address\n");
@@ -657,6 +658,7 @@ injector_status_t injector_start_app_on_win(
     injector->step = STEP1;
     injector->step_override = false;
     injector->set_gprs_only = true;
+    injector->is_initial_user_trap_set = false;
 
     if (!initialize_injector_functions(drakvuf, injector, file))
     {

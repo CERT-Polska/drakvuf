@@ -163,6 +163,7 @@ struct injector
     // Internal:
     drakvuf_t drakvuf;
     bool is32bit, hijacked, resumed, detected;
+    bool is_initial_user_trap_set;
     injection_method_t method;
     bool global_search;
     bool wait_for_exit;
