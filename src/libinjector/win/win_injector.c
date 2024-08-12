@@ -110,6 +110,7 @@
 #include "methods/win_createproc.h"
 #include "methods/win_shellexec.h"
 #include "methods/win_terminate.h"
+#include <debug_helpers.h>
 
 static bool injector_set_hijacked(injector_t injector, drakvuf_trap_info_t* info)
 {
@@ -394,6 +395,10 @@ event_response_t injector_int3_cb(drakvuf_t drakvuf, drakvuf_trap_info_t* info)
 
     if (!injector_set_hijacked(injector, info))
         return 0;
+
+    PRINT_DEBUG("injector_int3_cb:\n");
+    print_registers(info);
+    print_stack(drakvuf, info, info->regs->rsp);
 
     event_response_t event;
     switch (injector->method)

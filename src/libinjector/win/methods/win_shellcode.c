@@ -105,6 +105,7 @@
 #include "win_shellcode.h"
 #include <win/win_functions.h>
 #include <win/method_helpers.h>
+#include <debug_helpers.h>
 
 static event_response_t cleanup(injector_t injector, drakvuf_trap_info_t* info);
 static bool inject_payload(drakvuf_t drakvuf, drakvuf_trap_info_t* info);
@@ -121,6 +122,9 @@ event_response_t handle_win_shellcode(drakvuf_t drakvuf, drakvuf_trap_info_t* in
             // save registers
             PRINT_DEBUG("Saving registers\n");
             memcpy(&injector->x86_saved_regs, info->regs, sizeof(x86_registers_t));
+            print_registers(info);
+            print_stack(drakvuf, info, info->regs->rsp);
+
 
             if (!setup_virtual_alloc_stack(injector, info->regs))
             {
@@ -161,16 +165,18 @@ event_response_t handle_win_shellcode(drakvuf_t drakvuf, drakvuf_trap_info_t* in
         {
             PRINT_DEBUG("Shellcode executed\n");
             injector->rc = INJECTOR_SUCCEEDED;
+            print_registers(info);
+            print_stack(drakvuf, info, info->regs->rsp);
 
             memcpy(info->regs, &injector->x86_saved_regs, sizeof(x86_registers_t));
-            event = VMI_EVENT_RESPONSE_SET_REGISTERS;
-            break;
-        }
-        case STEP5:
-        {
+
+            PRINT_DEBUG("Recovered context\n");
+            print_registers(info);
+            print_stack(drakvuf, info, info->regs->rsp);
+
             drakvuf_remove_trap(drakvuf, info->trap, NULL);
             drakvuf_interrupt(drakvuf, SIGDRAKVUFERROR);
-            event = VMI_EVENT_RESPONSE_NONE;
+            event = VMI_EVENT_RESPONSE_SET_REGISTERS;
             break;
         }
         default:
