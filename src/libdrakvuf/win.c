@@ -488,9 +488,7 @@ bool win_get_object_type_index(drakvuf_t drakvuf, access_context_t* object_heade
     // but calculated as following:
     if (vmi_get_winver(drakvuf->vmi) == VMI_OS_WINDOWS_10)
     {
-        PRINT_DEBUG("win_get_object_type_index for VMI_OS_WINDOWS_10 index before: %d\n", *index);
         *index = *index ^ ((object_header_addr >> 8) & 0xff) ^ drakvuf->ob_header_cookie;
-        PRINT_DEBUG("win_get_object_type_index for VMI_OS_WINDOWS_10 index after: %d\n", *index);
     }
     else
     {
