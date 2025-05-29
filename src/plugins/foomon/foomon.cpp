@@ -114,10 +114,42 @@
 #include "private.h"
 #include "foomon.hpp"
 
+/**
+ * Searches process's InLoadOrderModuleList for given dll library and
+ * sets res_dll_base to its base address. Returns true on success.
+ */
+static
+bool get_dll_base(
+    drakvuf_t drakvuf,
+    addr_t process_base,
+    const std::string& dll_name,
+    addr_t* res_dll_base)
+{
+    addr_t process_dtb = 0;
+    if (!drakvuf_get_process_dtb(drakvuf, process_base, &process_dtb))
+        return false;
+
+    ACCESS_CONTEXT(ctx,
+        .translate_mechanism = VMI_TM_PROCESS_DTB,
+        .dtb = process_dtb
+    );
+
+    addr_t module_list_head = 0;
+    if (!drakvuf_get_module_list(drakvuf, process_base, &module_list_head))
+        return false;
+
+    return drakvuf_get_module_base_addr_ctx(drakvuf, module_list_head, &ctx, dll_name.c_str(), res_dll_base);
+}
+
 static event_response_t wait_for_target_process_cb(drakvuf_t drakvuf, drakvuf_trap_info_t* info)
 {
+    addr_t kernelbase_addr = 0;
     PRINT_DEBUG("[FOOMON] CR3 changed to 0x%" PRIx64 ". PID: %u PPID: %u TID: %u NAME: %s\n",
         info->regs->cr3, info->proc_data.pid, info->proc_data.ppid, info->proc_data.tid, info->proc_data.name);
+    if(get_dll_base(drakvuf, info->proc_data.base_addr, "kernelbase.dll", &kernelbase_addr))
+    {
+        PRINT_DEBUG("[FOOMON] Found kernelbase.dll: 0x%" PRIx64 ".", kernelbase_addr);
+    }
     return 0;
 }
 
