@@ -114,10 +114,28 @@
 #include "private.h"
 #include "foomon.hpp"
 
+static event_response_t wait_for_target_process_cb(drakvuf_t drakvuf, drakvuf_trap_info_t* info)
+{
+    PRINT_DEBUG("[FOOMON] CR3 changed to 0x%" PRIx64 ". PID: %u PPID: %u TID: %u\n",
+        info->regs->cr3, info->proc_data.pid, info->proc_data.ppid, info->proc_data.tid);
+    return 0;
+}
+
+bool setup_initial_traps(drakvuf_t drakvuf) {
+    drakvuf_trap_t trap =
+    {
+        .type = REGISTER,
+        .regaccess.type = CR3,
+        .cb = wait_for_target_process_cb,
+    };
+    return drakvuf_add_trap(drakvuf, &trap);
+}
+
 foomon::foomon(drakvuf_t drakvuf, output_format_t output)
     : pluginex(drakvuf, output)
 {
     PRINT_DEBUG("[FOOMON] Hello there.\n");
+    setup_initial_traps(drakvuf);
 }
 
 foomon::~foomon() {}
