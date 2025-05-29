@@ -116,18 +116,20 @@
 
 static event_response_t wait_for_target_process_cb(drakvuf_t drakvuf, drakvuf_trap_info_t* info)
 {
-    PRINT_DEBUG("[FOOMON] CR3 changed to 0x%" PRIx64 ". PID: %u PPID: %u TID: %u\n",
-        info->regs->cr3, info->proc_data.pid, info->proc_data.ppid, info->proc_data.tid);
+    PRINT_DEBUG("[FOOMON] CR3 changed to 0x%" PRIx64 ". PID: %u PPID: %u TID: %u NAME: %s\n",
+        info->regs->cr3, info->proc_data.pid, info->proc_data.ppid, info->proc_data.tid, info->proc_data.name);
     return 0;
 }
 
-bool setup_initial_traps(drakvuf_t drakvuf) {
-    drakvuf_trap_t trap =
-    {
+drakvuf_trap_t trap =
+   {
         .type = REGISTER,
         .regaccess.type = CR3,
         .cb = wait_for_target_process_cb,
-    };
+   };
+
+bool setup_initial_traps(drakvuf_t drakvuf) {
+
     return drakvuf_add_trap(drakvuf, &trap);
 }
 
