@@ -103,18 +103,21 @@
  ***************************************************************************/
 
 #include <inttypes.h>
+#include <libvmi/libvmi.h>
+#include <libvmi/peparse.h>
+#include <assert.h>
+#include <array>
+#include <vector>
 #include <libdrakvuf/json-util.h>
 
+#include "plugins/output_format.h"
 #include "private.h"
 #include "foomon.hpp"
 
 foomon::foomon(drakvuf_t drakvuf, output_format_t output)
     : pluginex(drakvuf, output)
 {
-    // Learning the ropes
-    fmt::print(plugin->m_output_format, "foomon", drakvuf, info,
-        keyval("message", "hello"),
-    );
+    PRINT_DEBUG("[FOOMON] Hello there.\n");
 }
 
 foomon::~foomon() {}

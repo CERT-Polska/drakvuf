@@ -309,6 +309,12 @@ sources += tlsmon/tlsmon.h
 sources += tlsmon/private.h
 endif
 
+if PLUGIN_FOOMON
+sources += foomon/foomon.cpp
+sources += foomon/foomon.h
+sources += foomon/private.h
+endif
+
 if PLUGIN_CODEMON
 sources += codemon/codemon.cpp
 sources += codemon/codemon.h

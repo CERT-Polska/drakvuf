@@ -136,6 +136,12 @@ if get_option('plugin-filetracer')
     config_h.set('ENABLE_PLUGIN_FILETRACER', 1)
 endif
 
+if get_option('plugin-foomon')
+    plugin_sources += 'foomon/foomon.cpp'
+
+    config_h.set('ENABLE_PLUGIN_FOOMON', 1)
+endif
+
 if get_option('plugin-hidsim')
     plugin_sources += 'hidsim/hidsim.cpp'
     plugin_sources += 'hidsim/qmp/qmp_connection.cpp'

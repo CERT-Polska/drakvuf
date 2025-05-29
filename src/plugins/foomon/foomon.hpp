@@ -111,7 +111,7 @@
 class foomon: public pluginex
 {
 public:
-    tlsmon(drakvuf_t drakvuf, output_format_t output);
+    foomon(drakvuf_t drakvuf, output_format_t output);
     ~foomon();
 };
 

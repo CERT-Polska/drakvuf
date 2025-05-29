@@ -149,6 +149,7 @@
 #include "etwmon/etwmon.h"
 #include "rebootmon/rebootmon.h"
 #include "linkmon/linkmon.h"
+#include "foomon/foomon.hpp"
 
 drakvuf_plugins::drakvuf_plugins(const drakvuf_t _drakvuf, output_format_t _output, os_t _os)
     : drakvuf{ _drakvuf }, output{ _output }, os{ _os }
@@ -632,6 +633,13 @@ int drakvuf_plugins::start(const drakvuf_plugin_t plugin_id,
                 case PLUGIN_ETWMON:
                 {
                     this->plugins[plugin_id] = std::make_unique<etwmon>(this->drakvuf, this->output);
+                    break;
+                }
+#endif
+#ifdef ENABLE_PLUGIN_FOOMON
+                case PLUGIN_FOOMON:
+                {
+                    this->plugins[plugin_id] = std::make_unique<foomon>(this->drakvuf, this->output);
                     break;
                 }
 #endif
